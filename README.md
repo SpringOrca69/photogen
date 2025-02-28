@@ -9,18 +9,55 @@ The project is divided into two main parts:
 - `frontend`: Contains the React application.
 - `backend`: Contains the Spring Boot application.
 
-## To run the application, follow these steps:
+## Prerequisites
 
+Before running the application, make sure you have the following installed:
+
+### For Backend
+- Java JDK 21 or later
+- Maven 3.9+ 
+
+### For Frontend
+- Node.js 16.x or later
+- npm 8.x or later
+
+## Installation
+
+### Installing Java
+1. Download and install Java JDK 21+ from [Oracle](https://www.oracle.com/java/technologies/downloads/)
+2. Set JAVA_HOME environment variable to point to your Java installation
+3. Verify installation: type "java --version" into your command prompt
+
+### Installing Maven
+1. Download Maven from [Apache Maven website](https://maven.apache.org/download.cgi)
+2. Extract it to a directory of your choice
+3. Add the `bin` directory to your PATH environment variable
+4. Verify installation: type "mvn --version" into your command prompt
+
+### Installing Node.js and npm
+1. Download and install Node.js from [Node.js website](https://nodejs.org/)
+2. The installation includes npm (Node Package Manager)
+3. Verify installation: type "node --version" into your command prompt
+
+## Setup and Run
+
+### Backend Setup
 1. Open a terminal and navigate to the `backend` directory:
    cd backend
 
-2. Start the Spring Boot application:
+2. Install Maven dependencies:
+   mvn clean install
+
+3. Start the Spring Boot application:
    mvn spring-boot:run
 
-3. Open another terminal and navigate to the frontend directory:
+4. Open another terminal and navigate to the frontend directory:
    cd frontend
 
-4. Start the React application:
+5. Install npm dependencies:
+   npm install
+
+6. Start the React application:
    npm start
 
 5. Open http://localhost:3000 in your browser to view the application.
@@ -68,6 +105,3 @@ In the `backend` directory, you can run:
 
 Runs the Spring Boot application.\
 Open [http://localhost:8080](http://localhost:8080) to view it in your browser.
-
-
-
