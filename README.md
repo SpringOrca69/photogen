@@ -9,7 +9,21 @@ The project is divided into two main parts:
 - `frontend`: Contains the React application.
 - `backend`: Contains the Spring Boot application.
 
-## Available Scripts
+## To run the application, follow these steps:
+
+1. Open a terminal and navigate to the `backend` directory:
+   cd backend
+
+2. Start the Spring Boot application:
+   mvn spring-boot:run
+
+3. Open another terminal and navigate to the frontend directory:
+   cd frontend
+
+4. Start the React application:
+   npm start
+
+5. Open http://localhost:3000 in your browser to view the application.
 
 ### Frontend
 
@@ -55,27 +69,5 @@ In the `backend` directory, you can run:
 Runs the Spring Boot application.\
 Open [http://localhost:8080](http://localhost:8080) to view it in your browser.
 
-## Running the Application
 
-# GitHub Copilot
-
-> Used 1 reference
-
-Sure, here is the completed segment for running the application:
-
-## To run the application, follow these steps:
-
-1. Open a terminal and navigate to the `backend` directory:
-   cd backend
-
-2. Start the Spring Boot application:
-   mvn spring-boot:run
-
-3. Open another terminal and navigate to the frontend directory:
-   cd frontend
-
-4. Start the React application:
-   npm start
-
-5. Open http://localhost:3000 in your browser to view the application.
 
