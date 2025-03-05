@@ -40,13 +40,27 @@
     justify-content: center; /* Align everything to center */
 }
 
-/* Export options (filename & format selection) */
 .export-options {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     gap: 10px;
     margin-bottom: 10px;
+    width: 100%;
 }
+
+/* Ensure the input field takes up most of the space */
+.export-options input {
+    flex: 1;
+    padding: 8px;
+    font-size: 16px;
+}
+
+/* Keep the dropdown size reasonable */
+.export-options select {
+    padding: 8px;
+    font-size: 16px;
+}
+
 
 /* Sliders with labels */
 .slider-container {

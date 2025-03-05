@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './Export.css';
 
 const Export = () => {
-    const [filename, setFilename] = useState('download');
+    const [filename, setFilename] = useState('');
     const [format, setFormat] = useState('jpeg');
-    const [scale, setScale] = useState(100); // Default scale in percentage
-    const [quality, setQuality] = useState(80); // Default JPEG quality in percentage
+    const [scale, setScale] = useState(100);
+    const [quality, setQuality] = useState(100);
     const [exportedImage, setExportedImage] = useState(null);
     const [fileSize, setFileSize] = useState(null);
     const [resolution, setResolution] = useState({ width: 0, height: 0 });
@@ -13,13 +13,18 @@ const Export = () => {
     useEffect(() => {
         const savedImages = JSON.parse(sessionStorage.getItem('uploadedImages')) || [];
         if (savedImages.length > 0) {
-            setExportedImage(savedImages[savedImages.length - 1].url);
+            const latestImage = savedImages[savedImages.length - 1];
+            setExportedImage(latestImage.url);
+
+            // Set default filename with "PhotoGen --" prefix
+            const originalName = latestImage.name ? latestImage.name.split('.')[0] : 'Untitled';
+            setFilename(`PhotoGen -- ${originalName}`);
         }
     }, []);
 
     useEffect(() => {
         if (exportedImage) {
-            estimateFileSize(); // Run once when the image is set
+            estimateFileSize();
         }
     }, [exportedImage]);
 
@@ -64,7 +69,7 @@ const Export = () => {
 
             const link = document.createElement('a');
             link.href = dataUrl;
-            link.download = `${filename.trim() || 'exported_image'}.${format}`;
+            link.download = `${filename.trim() || 'PhotoGen -- Exported'}.${format}`;
             link.click();
         };
     };
@@ -130,8 +135,3 @@ const Export = () => {
 };
 
 export default Export;
-
-
-
-
-
