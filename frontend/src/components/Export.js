@@ -4,20 +4,49 @@ import './Export.css';
 const Export = () => {
     const [filename, setFilename] = useState('download');
     const [format, setFormat] = useState('jpeg');
-    const [scale, setScale] = useState(1);
-    const [quality, setQuality] = useState(0.8); // JPEG quality
+    const [scale, setScale] = useState(100); // Default scale in percentage
+    const [quality, setQuality] = useState(80); // Default JPEG quality in percentage
     const [exportedImage, setExportedImage] = useState(null);
     const [fileSize, setFileSize] = useState(null);
+    const [resolution, setResolution] = useState({ width: 0, height: 0 });
 
-    // Load the latest edited image from sessionStorage
     useEffect(() => {
         const savedImages = JSON.parse(sessionStorage.getItem('uploadedImages')) || [];
         if (savedImages.length > 0) {
-            setExportedImage(savedImages[savedImages.length - 1].url); // Get the most recent image
+            setExportedImage(savedImages[savedImages.length - 1].url);
         }
     }, []);
 
-    // Function to process image (scaling, format conversion, and size estimation)
+    useEffect(() => {
+        if (exportedImage) {
+            estimateFileSize(); // Run once when the image is set
+        }
+    }, [exportedImage]);
+
+    const estimateFileSize = () => {
+        if (!exportedImage) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.src = exportedImage;
+
+        img.onload = () => {
+            canvas.width = (img.width * scale) / 100;
+            canvas.height = (img.height * scale) / 100;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            setResolution({ width: canvas.width, height: canvas.height });
+
+            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality / 100 : 1);
+            setFileSize((dataUrl.length * (3 / 4) / 1024).toFixed(2)); // Convert base64 size to KB
+        };
+    };
+
+    useEffect(() => {
+        estimateFileSize();
+    }, [scale, quality, format]);
+
     const processImage = () => {
         if (!exportedImage) return;
 
@@ -27,14 +56,12 @@ const Export = () => {
         img.src = exportedImage;
 
         img.onload = () => {
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
+            canvas.width = (img.width * scale) / 100;
+            canvas.height = (img.height * scale) / 100;
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality : 1);
-            setFileSize((dataUrl.length * (3 / 4) / 1024).toFixed(2)); // Convert base64 size to KB
+            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality / 100 : 1);
 
-            // Trigger download
             const link = document.createElement('a');
             link.href = dataUrl;
             link.download = `${filename.trim() || 'exported_image'}.${format}`;
@@ -44,54 +71,67 @@ const Export = () => {
 
     return (
         <div className="export-container">
-            <h2>Export Image</h2>
-            <div className="export-options">
-                <input
-                    type="text"
-                    placeholder="Filename"
-                    value={filename}
-                    onChange={(e) => setFilename(e.target.value)}
-                />
-                <select value={format} onChange={(e) => setFormat(e.target.value)}>
-                    <option value="jpeg">JPEG</option>
-                    <option value="png">PNG</option>
-                </select>
-                <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    value={scale}
-                    onChange={(e) => setScale(parseFloat(e.target.value))}
-                />
+            <div className="export-left">
+                {exportedImage && (
+                    <div className="export-preview">
+                        <h3>Preview</h3>
+                        <img src={exportedImage} alt="Exported preview" className="exported-image" />
+                    </div>
+                )}
             </div>
 
-            {/* Show JPEG Quality Slider only when JPEG is selected */}
-            {format === 'jpeg' && (
-                <div className="quality-control">
-                    <label>Quality: {quality}</label>
+            <div className="export-right">
+                <h2>Export Image</h2>
+                <div className="export-options">
+                    <input
+                        type="text"
+                        placeholder="Filename"
+                        value={filename}
+                        onChange={(e) => setFilename(e.target.value)}
+                    />
+                    <select value={format} onChange={(e) => setFormat(e.target.value)}>
+                        <option value="jpeg">JPEG</option>
+                        <option value="png">PNG</option>
+                    </select>
+                </div>
+
+                <div className="slider-container">
+                    <label>Size: {scale}%</label>
                     <input
                         type="range"
-                        min="0.1"
-                        max="1"
-                        step="0.1"
-                        value={quality}
-                        onChange={(e) => setQuality(parseFloat(e.target.value))}
+                        min="10"
+                        max="200"
+                        step="10"
+                        value={scale}
+                        onChange={(e) => setScale(parseInt(e.target.value))}
                     />
+                    <span>{resolution.width} × {resolution.height} px</span>
                 </div>
-            )}
 
-            {exportedImage && (
-                <div className="export-preview">
-                    <h3>Preview</h3>
-                    <img src={exportedImage} alt="Exported preview" className="exported-image" />
-                    {fileSize && <p>Estimated file size: {fileSize} KB</p>}
-                    <button onClick={processImage}>Download Image</button>
-                </div>
-            )}
+                {format === 'jpeg' && (
+                    <div className="slider-container">
+                        <label>Quality: {quality}%</label>
+                        <input
+                            type="range"
+                            min="10"
+                            max="100"
+                            step="5"
+                            value={quality}
+                            onChange={(e) => setQuality(parseInt(e.target.value))}
+                        />
+                    </div>
+                )}
+
+                <p>Estimated file size: {fileSize ? `${fileSize} KB` : 'Calculating...'}</p>
+                <button onClick={processImage}>Download Image</button>
+            </div>
         </div>
     );
 };
 
 export default Export;
+
+
+
 
 

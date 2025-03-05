@@ -1,30 +1,62 @@
+/* Main container: ensures full height without scrolling */
 .export-container {
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 20px;
+    max-height: 100vh; /* Full height without scrolling */
+    overflow: hidden;
 }
 
-.export-options {
+/* Left section: Image Preview */
+.export-left {
+    flex: 1;
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
+    align-items: center;
+    max-height: 90vh; /* Prevents overflow */
 }
 
-.quality-control {
-    margin-bottom: 20px;
-}
-
+/* Image Preview */
 .export-preview {
-    margin-top: 20px;
+    text-align: center;
+    max-width: 100%;
 }
 
 .exported-image {
-    margin-top: 10px;
-    max-width: 100%;
-    border: 1px solid #ddd;
+    max-width: 90%;
+    max-height: 400px; /* Limits height to prevent overflow */
     border-radius: 8px;
+    border: 1px solid #ddd;
 }
 
+/* Right section: Controls */
+.export-right {
+    flex: 1;
+    padding: 20px;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Align everything to center */
+}
+
+/* Export options (filename & format selection) */
+.export-options {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* Sliders with labels */
+.slider-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* Buttons */
 button {
     background-color: #007bff;
     color: white;
@@ -32,6 +64,7 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    width: 100%;
     margin-top: 10px;
 }
 
@@ -39,5 +72,24 @@ button:hover {
     background-color: #0056b3;
 }
 
+/* Ensure everything fits on smaller screens */
+@media (max-width: 900px) {
+    .export-container {
+        flex-direction: column;
+        height: auto;
+    }
 
+    .export-left {
+        max-height: 300px;
+    }
+
+    .exported-image {
+        max-height: 250px;
+    }
+
+    .export-right {
+        max-width: 100%;
+        padding: 10px;
+    }
+}
 
