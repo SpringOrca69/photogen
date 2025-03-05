@@ -5,6 +5,7 @@ import CropResize from './components/CropResize';
 import BackgroundRemover from './components/BackgroundRemover';
 import './App.css';
 import TShirtEditor from './components/TShirtEditor';
+import Export from './components/Export';
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('Welcome');
@@ -23,6 +24,8 @@ function App() {
         return <BackgroundRemover />;
       case 'T-Shirt Editor':
         return <TShirtEditor />;
+      case 'Download photos in .jpeg, .png, etc.':
+        return <Export />;
       default:
         return (
           <div className="welcome-content">
