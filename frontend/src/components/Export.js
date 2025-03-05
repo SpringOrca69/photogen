@@ -18,7 +18,7 @@ const Export = () => {
 
             // Set default filename with "PhotoGen --" prefix
             const originalName = latestImage.name ? latestImage.name.split('.')[0] : 'Untitled';
-            setFilename(`PhotoGen -- ${originalName}`);
+            setFilename(`PhotoGen — ${originalName}`);
         }
     }, []);
 
