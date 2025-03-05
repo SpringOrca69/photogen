@@ -1,0 +1,43 @@
+.export-container {
+    text-align: center;
+    padding: 20px;
+}
+
+.export-options {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.quality-control {
+    margin-bottom: 20px;
+}
+
+.export-preview {
+    margin-top: 20px;
+}
+
+.exported-image {
+    margin-top: 10px;
+    max-width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+
+
