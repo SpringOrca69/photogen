@@ -1,11 +1,9 @@
 import React from 'react';
 import './ImageGallery.css';
 
-// FOR TESTING ONLY
-
-function ImageGallery({ images, currentImageIndex, isCropMode, handleThumbnailClick }) {
+function ImageGallery({ images, currentImageIndex, isEditMode, handleThumbnailClick }) {
   return (
-    <section className={`thumbnails-section ${isCropMode ? 'disabled' : ''}`}>
+    <section className={`thumbnails-section ${isEditMode ? 'disabled' : ''}`}>
       <h2 className="section-title">Image Gallery</h2>
       <div className="thumbnails-grid">
         {images.map((image, index) => (

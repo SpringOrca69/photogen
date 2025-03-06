@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Export.css';
 
-const Export = () => {
+const Export = ({ images, currentImageIndex }) => {
     const [filename, setFilename] = useState('');
     const [format, setFormat] = useState('jpeg');
     const [scale, setScale] = useState(100);
@@ -11,16 +11,15 @@ const Export = () => {
     const [resolution, setResolution] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
-        const savedImages = JSON.parse(sessionStorage.getItem('uploadedImages')) || [];
-        if (savedImages.length > 0) {
-            const latestImage = savedImages[savedImages.length - 1];
+        if (images.length > 0) {
+            const latestImage = images[currentImageIndex];
             setExportedImage(latestImage.url);
 
             // Set default filename with "PhotoGen --" prefix
             const originalName = latestImage.name ? latestImage.name.split('.')[0] : 'Untitled';
             setFilename(`PhotoGen — ${originalName}`);
         }
-    }, []);
+    }, [images, currentImageIndex]);
 
     useEffect(() => {
         if (exportedImage) {

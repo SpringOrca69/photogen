@@ -2,13 +2,9 @@ import React, { useState, useRef } from 'react';
 import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import './CropResize.css';
+import ImageGallery from './ImageGallery';
 
-function CropResize({ onNext, onBack }) {
-  const [images, setImages] = useState(() => {
-    const savedImages = sessionStorage.getItem('uploadedImages');
-    return savedImages ? JSON.parse(savedImages) : [];
-  });
-  
+function CropResize({ images, setImages }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isCropMode, setIsCropMode] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(null);
@@ -55,10 +51,12 @@ function CropResize({ onNext, onBack }) {
         originalIndex: currentImageIndex
       };
       
-      const updatedImages = [...images, newImage];
+      const updatedImages = images.map((img, index) => 
+        index === currentImageIndex ? newImage : img
+      );
       setImages(updatedImages);
-      setCurrentImageIndex(updatedImages.length - 1);
       sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
+
       setIsCropMode(false);
       setAspectRatio(null);
     }
@@ -111,7 +109,7 @@ function CropResize({ onNext, onBack }) {
 
           <div className="controls">
             {!isCropMode ? (
-              <div className="standard-controls single-button">
+              <div className="standard-controls">
                 <button onClick={handleStartCrop} className="control-button primary">
                   Crop this photo
                 </button>
@@ -142,28 +140,12 @@ function CropResize({ onNext, onBack }) {
           </div>
         </section>
 
-        <section className={`thumbnails-section ${isCropMode ? 'disabled' : ''}`}>
-          <h2 className="section-title">Image Gallery</h2>
-          <div className="thumbnails-grid">
-            {images.map((image, index) => (
-              <div 
-                key={index}
-                className={`thumbnail-card ${currentImageIndex === index ? 'active' : ''}`}
-                onClick={() => handleThumbnailClick(index)}
-              >
-                <div className="thumbnail-image">
-                  <img src={image.url} alt={`Version ${index + 1}`} />
-                </div>
-                <div className="thumbnail-info">
-                  <span className="thumbnail-name">{image.name}</span>
-                  {image.originalIndex !== undefined && (
-                    <span className="thumbnail-badge">Cropped</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ImageGallery 
+          images={images} 
+          currentImageIndex={currentImageIndex} 
+          isEditMode={isCropMode} 
+          handleThumbnailClick={handleThumbnailClick} 
+        />
 
         <div className="continue-button-container">
           <button className="continue-button">

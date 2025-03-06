@@ -1,0 +1,55 @@
+.thumbnails-section {
+  padding: 20px;
+}
+
+.thumbnails-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.section-title {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.thumbnails-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.thumbnail-card {
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.thumbnail-card.active {
+  border-color: #007bff;
+}
+
+.thumbnail-image img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+}
+
+.thumbnail-info {
+  text-align: center;
+  margin-top: 5px;
+}
+
+.thumbnail-name {
+  display: block;
+  font-size: 14px;
+}
+
+.thumbnail-badge {
+  display: inline-block;
+  background-color: #ff5722;
+  color: white;
+  padding: 2px 5px;
+  font-size: 12px;
+  border-radius: 3px;
+  margin-top: 5px;
+}

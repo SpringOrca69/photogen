@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import './TShirtEditor.css';
 
-function TShirtEditor({ onNext, onBack }) {
-  const [images, setImages] = useState(() => {
-    const savedImages = sessionStorage.getItem('uploadedImages');
-    return savedImages ? JSON.parse(savedImages) : [];
-  });
-  
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+function TShirtEditor({ images, setImages, currentImageIndex, setCurrentImageIndex }) {
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleThumbnailClick = (index) => {

@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import './BackgroundRemover.css';
 
-function BackgroundRemover({ onNext, onBack }) {
-  const [images, setImages] = useState(() => {
-    const savedImages = sessionStorage.getItem('uploadedImages');
-    return savedImages ? JSON.parse(savedImages) : [];
-  });
-  
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+function BackgroundRemover({ images, setImages, currentImageIndex, setCurrentImageIndex }) {
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleThumbnailClick = (index) => {

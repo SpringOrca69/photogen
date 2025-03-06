@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Upload.css';
 
-function Upload({ onNext }) {
+function Upload({ onNext, updateImages }) {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
@@ -59,6 +59,7 @@ function Upload({ onNext }) {
       name: preview.name
     }));
     sessionStorage.setItem('uploadedImages', JSON.stringify(imageData));
+    updateImages(imageData);
     onNext('Crop & Resize');
   };
 
