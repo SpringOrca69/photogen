@@ -60,7 +60,7 @@ Before running the application, make sure you have the following installed:
 6. Start the React application:
    npm start
 
-5. Open http://localhost:3000 in your browser to view the application.
+7. Open http://localhost:3000 in your browser to view the application.
 
 ### Frontend
 
