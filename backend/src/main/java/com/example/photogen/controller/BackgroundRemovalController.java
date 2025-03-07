@@ -108,7 +108,7 @@ public class BackgroundRemovalController {
         Mat faceImageClone = faceImage.clone();
         
         if (faceRect.height < 0.6 * drawnImage.height()) {
-            Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.9, 1.3);
+            Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
             Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
             Mat clothesImage = drawnImage.clone();
             Mat clothesImageClone = clothesImage.clone();
@@ -155,16 +155,14 @@ public class BackgroundRemovalController {
     private Rect clothesRegion(Rect faceRect, Size imageSize) {
         // Expand both horizontally and vertically
         double horizontalExpansion = 2.7;
-        double verticalExpansion = 2.7;
 
         int newWidth = (int) (faceRect.width * horizontalExpansion);
         int newX = Math.max(0, faceRect.x - (newWidth - faceRect.width) / 2);
         newWidth = Math.min(newWidth, (int) (imageSize.width - newX));
         newWidth = Math.max(newWidth, 0);
     
-        int newHeight = (int) (faceRect.height * verticalExpansion);
-        int newY = faceRect.y + faceRect.height;
-        newHeight = Math.min(newHeight, (int) (imageSize.height - newY));
+        int newY = faceRect.y + faceRect.height - 20;
+        int newHeight = (int) (imageSize.height - newY);
         newHeight = Math.max(newHeight, 0);
     
         return new Rect(newX, newY, newWidth, newHeight);
