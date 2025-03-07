@@ -1,6 +1,6 @@
 # Photogen
 
-This project is a web application built with React for the frontend and Spring Boot for the backend. It allows users to upload images, crop and resize them, remove backgrounds, and edit T-shirts.
+This project is a web application built with React for the frontend and Spring Boot for the backend. It allows users to upload images, crop and resize them, remove and replace backgrounds, and edit T-shirts.
 
 ## Project Structure
 
@@ -39,6 +39,23 @@ Before running the application, make sure you have the following installed:
 2. The installation includes npm (Node Package Manager)
 3. Verify installation: type "node --version" into your command prompt
 
+### Installing OpenCV (Required for Backend)
+1. Download OpenCV from [OpenCV website](https://opencv.org/releases/)
+   - For Java JDK 21 or below, choose OpenCV 4.8.0
+   - For newer versions, select the appropriate compatible release
+
+2. Install OpenCV to a location on your computer (e.g., D:\opencv or C:\opencv)
+
+3a. For Windows:
+   - Copy the native library file from your OpenCV installation to your JDK bin folder
+   - Example: Copy `D:\opencv\build\java\x64\opencv_java480.dll` to `C:\Program Files\Java\jdk-21\bin`
+   
+3b. For Mac:
+   - Copy the native library file to your JDK bin folder
+   - Example: Copy `libopencv_java480.dylib` to your JDK bin folder
+   
+4. Put the jar file onto the system environment path
+
 ## Setup and Run
 
 ### Backend Setup
@@ -55,7 +72,7 @@ Before running the application, make sure you have the following installed:
    cd frontend
 
 5. Install npm dependencies:
-   npm install
+   npm install @wellbees/color-picker-input
 
 6. Start the React application:
    npm start
