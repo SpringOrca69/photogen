@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfRect;
@@ -52,6 +51,7 @@ public class AutoCropController {
             try {
                 inputImageBytes = Base64.getDecoder().decode(imageData);
             } catch (IllegalArgumentException e) {
+                logger.error("Base64 decoding failed", e);
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid base64 image data"));
             }
             
@@ -79,26 +79,42 @@ public class AutoCropController {
                 return ResponseEntity.internalServerError().body(Map.of("error", "Failed to initialize face detector: " + e.getMessage()));
             }
             
+            // Try multiple detection parameters for better reliability
             MatOfRect faceDetections = new MatOfRect();
+            double[] scaleFactors = {1.1, 1.2, 1.3};
+            int[] minNeighbors = {5, 4, 3};
+            boolean faceFound = false;
             
-            // Try with initial parameters
-            faceDetector.detectMultiScale(
-                inputImage, 
-                faceDetections,
-                1.1,    // Scale factor
-                5,      // Min neighbors
-                0,      // Flags
-                new Size(30, 30),  // Min size
-                new Size()         // Max size
-            );
+            for (double scaleFactor : scaleFactors) {
+                for (int neighbor : minNeighbors) {
+                    if (!faceFound) {
+                        faceDetector.detectMultiScale(
+                            inputImage, 
+                            faceDetections,
+                            scaleFactor,
+                            neighbor,
+                            0,
+                            new Size(30, 30),
+                            new Size()
+                        );
+                        
+                        if (!faceDetections.empty()) {
+                            faceFound = true;
+                            logger.info("Face found with scaleFactor={}, minNeighbors={}", scaleFactor, neighbor);
+                            break;
+                        }
+                    }
+                }
+                if (faceFound) break;
+            }
             
-            // If no faces found, try with more lenient parameters
-            if (faceDetections.empty()) {
+            if (!faceFound) {
+                // Try with more lenient parameters for difficult cases
                 faceDetector.detectMultiScale(
                     inputImage, 
                     faceDetections,
-                    1.2,    // More lenient scale factor
-                    3,      // Fewer min neighbors
+                    1.1,
+                    2,
                     0,
                     new Size(20, 20),
                     new Size()
@@ -108,15 +124,17 @@ public class AutoCropController {
             if (faceDetections.empty()) {
                 // No face detected, return original image with center coordinates
                 logger.info("No faces detected, using center of image");
-                return ResponseEntity.ok(Map.of(
-                    "cropData", Map.of(
-                        "x", inputImage.width() / 4,
-                        "y", inputImage.height() / 4,
-                        "width", inputImage.width() / 2,
-                        "height", inputImage.height() / 2
-                    ),
-                    "message", "No face detected, using default center crop"
-                ));
+                Map<String, Object> cropData = new HashMap<>();
+                cropData.put("x", inputImage.width() / 4);
+                cropData.put("y", inputImage.height() / 4);
+                cropData.put("width", inputImage.width() / 2);
+                cropData.put("height", inputImage.height() / 2);
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("cropData", cropData);
+                response.put("message", "No face detected, using default center crop");
+                
+                return ResponseEntity.ok(response);
             }
 
             // Find largest face
@@ -124,17 +142,20 @@ public class AutoCropController {
             if (faces.length == 0) {
                 // Safety check - should not happen as we already checked faceDetections.empty()
                 logger.warn("No faces in array despite non-empty MatOfRect");
-                return ResponseEntity.ok(Map.of(
-                    "cropData", Map.of(
-                        "x", inputImage.width() / 4,
-                        "y", inputImage.height() / 4,
-                        "width", inputImage.width() / 2,
-                        "height", inputImage.height() / 2
-                    ),
-                    "message", "Face detection issue, using default center crop"
-                ));
+                Map<String, Object> cropData = new HashMap<>();
+                cropData.put("x", inputImage.width() / 4);
+                cropData.put("y", inputImage.height() / 4);
+                cropData.put("width", inputImage.width() / 2);
+                cropData.put("height", inputImage.height() / 2);
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("cropData", cropData);
+                response.put("message", "Face detection issue, using default center crop");
+                
+                return ResponseEntity.ok(response);
             }
             
+            // Find the largest face
             Rect faceRect = faces[0];
             for (Rect rect : faces) {
                 if (rect.area() > faceRect.area()) {
@@ -172,7 +193,176 @@ public class AutoCropController {
             return ResponseEntity.internalServerError().body(Map.of("error", "Face detection failed: " + e.getMessage()));
         }
     }
+
+    private Rect calculateOptimalCrop(Size imageSize, Rect faceRect, int aspectRatio) {
+        // Create a copy of face rectangle for reference
+        Rect originalFaceRect = new Rect(faceRect.x, faceRect.y, faceRect.width, faceRect.height);
+        
+        // Expand the face rectangle to better cover the whole face
+        // Forehead is often not fully detected, so add more padding at the top
+        int expandTopPercentage = 50; // 50% more space above the face for forehead
+        int expandSidesPercentage = 20; // 20% more space on each side
+        int expandBottomPercentage = 30; // 30% more space below the face for chin
+        
+        int expandedX = Math.max(0, originalFaceRect.x - (originalFaceRect.width * expandSidesPercentage / 100));
+        int expandedY = Math.max(0, originalFaceRect.y - (originalFaceRect.height * expandTopPercentage / 100));
+        int expandedWidth = Math.min((int)imageSize.width - expandedX, 
+                                   originalFaceRect.width * (100 + 2 * expandSidesPercentage) / 100);
+        int expandedHeight = Math.min((int)imageSize.height - expandedY,
+                                    originalFaceRect.height * (100 + expandTopPercentage + expandBottomPercentage) / 100);
+        
+        // Update the face rectangle with the expanded one
+        Rect expandedFaceRect = new Rect(expandedX, expandedY, expandedWidth, expandedHeight);
+        
+        // Calculate face center point - ALWAYS center on this point
+        Point faceCenter = new Point(
+            expandedFaceRect.x + expandedFaceRect.width / 2.0,
+            expandedFaceRect.y + expandedFaceRect.height / 2.0
+        );
+        
+        // For passport photos, face should occupy appropriate percentage of image height
+        // Standard for passport: face height should be 70-80% of photo height
+        double faceHeightPercentage = 0.7; // Reduced from 0.75 to give more padding
+        
+        // Calculate crop size based on face dimensions with better padding
+        double faceSizeFactor;
+        if (aspectRatio > 100 || (double)aspectRatio == 35.0/45.0) {  // Passport ratio (35/45)
+            // Increased padding for passport photos
+            faceSizeFactor = 1.8 / faceHeightPercentage;  // More padding around the face
+        } else {
+            faceSizeFactor = 4.0;  // Increased from 3.5 to allow more space around the face
+        }
+        
+        // Ensure we have enough space around the face by using the larger dimension
+        int cropSize = (int) Math.max(expandedFaceRect.height * faceSizeFactor, 
+                                      expandedFaceRect.width * faceSizeFactor * 1.8); // Increased multiplier
+        
+        // Ensure minimum crop size for faces detected too small
+        int minSize = (int) Math.min(imageSize.width, imageSize.height) / 2;
+        cropSize = Math.max(cropSize, minSize);
+        
+        // Calculate dimensions based on aspect ratio
+        int cropWidth, cropHeight;
+        
+        // Handle different aspect ratios
+        if (aspectRatio == 1) { // 1:1 square
+            cropWidth = cropHeight = cropSize;
+        } else if (aspectRatio == 4 || aspectRatio == 43) { // 4:3 or 3:4
+            if (aspectRatio == 4) {
+                cropWidth = (int) (cropSize * (4.0 / 3.0));
+                cropHeight = cropSize;
+            } else { // 3:4
+                cropWidth = cropSize;
+                cropHeight = (int) (cropSize * (4.0 / 3.0));
+            }
+        } else if (aspectRatio == 16 || aspectRatio == 169) { // 16:9 or 9:16
+            if (aspectRatio == 16) {
+                cropWidth = (int) (cropSize * (16.0 / 9.0));
+                cropHeight = cropSize;
+            } else { // 9:16
+                cropWidth = cropSize;
+                cropHeight = (int) (cropSize * (16.0 / 9.0));
+            }
+        } else { // Custom aspect ratio (like 35/45 for passport)
+            // Parse numerator and denominator if available
+            double aspectRatioValue;
+            if (aspectRatio > 100) { // Special case for fractional values stored as integers
+                aspectRatioValue = aspectRatio / 1000.0;
+            } else if (Math.abs((double)aspectRatio - 35.0/45.0) < 0.001) {
+                aspectRatioValue = 35.0/45.0;  // Exact passport ratio
+            } else {
+                aspectRatioValue = (double) aspectRatio;
+            }
+            
+            // For passport photos (aspect ratio 35:45 ≈ 0.778)
+            if (Math.abs(aspectRatioValue - 35.0/45.0) < 0.001) {
+                cropWidth = (int) (cropSize * aspectRatioValue);
+                cropHeight = cropSize;
+                
+                // For passport photos, position face according to standards
+                // Estimate eye position (approximately 40% from top of face)
+                double estimatedEyeY = expandedFaceRect.y + expandedFaceRect.height * 0.4;
+                
+                // Position eyes at 45% of the image height from top (standard for passport photos)
+                double eyePositionFactor = 0.45;
+                int desiredEyeY = (int)(cropHeight * eyePositionFactor);
+                
+                // Adjust face center to position eyes at the standard position
+                faceCenter = new Point(
+                    faceCenter.x,
+                    estimatedEyeY + (desiredEyeY - estimatedEyeY)
+                );
+            } else if (aspectRatioValue < 1) {
+                cropWidth = (int) (cropSize * aspectRatioValue);
+                cropHeight = cropSize;
+            } else {
+                cropWidth = cropSize;
+                cropHeight = (int) (cropSize / aspectRatioValue);
+            }
+        }
+        
+        // ALWAYS center crop rectangle on the face center point
+        int cropX = (int) Math.round(faceCenter.x - cropWidth / 2.0);
+        int cropY = (int) Math.round(faceCenter.y - cropHeight / 2.0);
+        
+        // Apply boundary constraints while trying to keep the face centered
+        if (cropX < 0) {
+            cropX = 0;
+        } else if (cropX + cropWidth > imageSize.width) {
+            cropX = (int)imageSize.width - cropWidth;
+        }
+        
+        if (cropY < 0) {
+            cropY = 0;
+        } else if (cropY + cropHeight > imageSize.height) {
+            cropY = (int)imageSize.height - cropHeight;
+        }
+        
+        // Make sure the face is always fully contained within the crop
+        // If not, adjust the crop position while maintaining aspect ratio
+        if (!isRectFullyContained(expandedFaceRect, new Rect(cropX, cropY, cropWidth, cropHeight))) {
+            // Adjust X if needed
+            if (cropX > expandedFaceRect.x) {
+                cropX = Math.max(0, expandedFaceRect.x - (int)(expandedFaceRect.width * 0.2)); // 20% padding
+            }
+            if (cropX + cropWidth < expandedFaceRect.x + expandedFaceRect.width) {
+                int newWidth = (int)(expandedFaceRect.x + expandedFaceRect.width * 1.2) - cropX; // 20% padding
+                cropWidth = Math.min(newWidth, (int)imageSize.width - cropX);
+            }
+            
+            // Adjust Y if needed
+            if (cropY > expandedFaceRect.y) {
+                cropY = Math.max(0, expandedFaceRect.y - (int)(expandedFaceRect.height * 0.2)); // 20% padding
+            }
+            if (cropY + cropHeight < expandedFaceRect.y + expandedFaceRect.height) {
+                int newHeight = (int)(expandedFaceRect.y + expandedFaceRect.height * 1.2) - cropY; // 20% padding
+                cropHeight = Math.min(newHeight, (int)imageSize.height - cropY);
+            }
+        }
+
+        // Final adjustments to ensure we don't exceed image bounds
+        cropX = Math.max(0, cropX);
+        cropY = Math.max(0, cropY);
+        cropWidth = Math.min(cropWidth, (int)imageSize.width - cropX);
+        cropHeight = Math.min(cropHeight, (int)imageSize.height - cropY);
+        
+        return new Rect(cropX, cropY, cropWidth, cropHeight);
+    }
     
+    // Helper method to check if a point is inside a rectangle
+    private boolean isPointInRect(Point p, Rect r) {
+        return p.x >= r.x && p.x < (r.x + r.width) && 
+               p.y >= r.y && p.y < (r.y + r.height);
+    }
+    
+    // Helper method to check if a rectangle is fully contained within another
+    private boolean isRectFullyContained(Rect innerRect, Rect outerRect) {
+        return innerRect.x >= outerRect.x &&
+               innerRect.y >= outerRect.y &&
+               (innerRect.x + innerRect.width) <= (outerRect.x + outerRect.width) &&
+               (innerRect.y + innerRect.height) <= (outerRect.y + outerRect.height);
+    }
+
     @PostMapping("/debug-face-detection")
     public ResponseEntity<?> debugFaceDetection(@RequestBody Map<String, String> payload) {
         try {
@@ -314,17 +504,29 @@ public class AutoCropController {
             }
             
             if (faceDetections.empty()) {
-                // No face detected even with lenient parameters
-                logger.info("No faces detected after multiple attempts, using center of image");
-                return ResponseEntity.ok(Map.of(
-                    "cropData", Map.of(
-                        "x", inputImage.width() / 4,
-                        "y", inputImage.height() / 4,
-                        "width", inputImage.width() / 2,
-                        "height", inputImage.height() / 2
-                    ),
-                    "message", "No face detected, using default center crop"
-                ));
+                // Try one more time with even more lenient parameters
+                faceDetector.detectMultiScale(
+                    inputImage, 
+                    faceDetections, 
+                    1.1,   // scale factor
+                    2,     // min neighbors
+                    0,     // flags
+                    new Size(15, 15),  // smaller min size
+                    new Size()         // max size
+                );
+                
+                if (faceDetections.empty()) {
+                    logger.info("No faces detected after multiple attempts, using center of image");
+                    return ResponseEntity.ok(Map.of(
+                        "cropData", Map.of(
+                            "x", inputImage.width() / 4,
+                            "y", inputImage.height() / 4,
+                            "width", inputImage.width() / 2,
+                            "height", inputImage.height() / 2
+                        ),
+                        "message", "No face detected, using default center crop"
+                    ));
+                }
             }
 
             // Find largest face
@@ -337,8 +539,37 @@ public class AutoCropController {
             }
             
             // Calculate optimal crop area (centered on face)
-            int aspectRatio = Integer.parseInt(payload.getOrDefault("aspectRatio", "1"));
-            Rect cropRect = calculateOptimalCrop(inputImage.size(), faceRect, aspectRatio);
+            // Use double for aspect ratio instead of int
+            double aspectRatio;
+            try {
+                String aspectRatioStr = payload.getOrDefault("aspectRatio", "1");
+                aspectRatio = Double.parseDouble(aspectRatioStr);
+            } catch (NumberFormatException e) {
+                logger.warn("Invalid aspect ratio format, defaulting to 1:1");
+                aspectRatio = 1.0;
+            }
+            
+            // Convert to the expected format for the existing calculateOptimalCrop method
+            // We'll pass special values to indicate particular aspect ratios
+            int aspectRatioParam;
+            if (Math.abs(aspectRatio - 1.0) < 0.001) {
+                aspectRatioParam = 1; // square
+            } else if (Math.abs(aspectRatio - 4.0/3.0) < 0.001) {
+                aspectRatioParam = 4; // 4:3
+            } else if (Math.abs(aspectRatio - 3.0/4.0) < 0.001) {
+                aspectRatioParam = 43; // 3:4
+            } else if (Math.abs(aspectRatio - 16.0/9.0) < 0.001) {
+                aspectRatioParam = 16; // 16:9
+            } else if (Math.abs(aspectRatio - 9.0/16.0) < 0.001) {
+                aspectRatioParam = 169; // 9:16
+            } else if (Math.abs(aspectRatio - 35.0/45.0) < 0.001) {
+                aspectRatioParam = 778; // Passport ratio stored as integer (35/45 ≈ 0.778)
+            } else {
+                // For other ratios, just use a large value to indicate custom ratio
+                aspectRatioParam = (int)(aspectRatio * 1000); 
+            }
+            
+            Rect cropRect = calculateOptimalCrop(inputImage.size(), faceRect, aspectRatioParam);
             
             logger.info("Face detected at: " + faceRect.toString());
             logger.info("Optimal crop: " + cropRect.toString());
@@ -358,67 +589,4 @@ public class AutoCropController {
         }
     }
 
-    private Rect calculateOptimalCrop(Size imageSize, Rect faceRect, int aspectRatio) {
-        // Calculate center of face
-        Point faceCenter = new Point(
-            faceRect.x + faceRect.width / 2.0,
-            faceRect.y + faceRect.height / 2.0
-        );
-        
-        // Calculate crop dimensions based on aspect ratio
-        // Make crop area 2x the size of the face to include surrounding context
-        int cropSize = (int) Math.max(faceRect.width * 2.5, faceRect.height * 2.5);
-        
-        int cropWidth, cropHeight;
-        if (aspectRatio == 1) { // 1:1 square
-            cropWidth = cropHeight = cropSize;
-        } else if (aspectRatio == 4) { // 4:3 or 3:4
-            boolean isLandscape = imageSize.width > imageSize.height;
-            if (isLandscape) {
-                cropWidth = (int) (cropSize * (4.0 / 3.0));
-                cropHeight = cropSize;
-            } else {
-                cropWidth = cropSize;
-                cropHeight = (int) (cropSize * (4.0 / 3.0));
-            }
-        } else if (aspectRatio == 16) { // 16:9 or 9:16
-            boolean isLandscape = imageSize.width > imageSize.height;
-            if (isLandscape) {
-                cropWidth = (int) (cropSize * (16.0 / 9.0));
-                cropHeight = cropSize;
-            } else {
-                cropWidth = cropSize;
-                cropHeight = (int) (cropSize * (16.0 / 9.0));
-            }
-        } else { // Free form, use image aspect ratio
-            double imgAspect = imageSize.width / imageSize.height;
-            if (imgAspect > 1) {
-                cropWidth = (int) (cropSize * imgAspect);
-                cropHeight = cropSize;
-            } else {
-                cropWidth = cropSize;
-                cropHeight = (int) (cropSize / imgAspect);
-            }
-        }
-        
-        // Calculate crop rectangle, ensuring it stays within image bounds
-        int cropX = (int) Math.max(0, faceCenter.x - cropWidth / 2);
-        int cropY = (int) Math.max(0, faceCenter.y - cropHeight / 2);
-        
-        // Adjust if the crop goes beyond image bounds
-        if (cropX + cropWidth > imageSize.width) {
-            cropX = (int) (imageSize.width - cropWidth);
-        }
-        if (cropY + cropHeight > imageSize.height) {
-            cropY = (int) (imageSize.height - cropHeight);
-        }
-        
-        // Final safety check in case of overflows
-        cropX = Math.max(0, cropX);
-        cropY = Math.max(0, cropY);
-        cropWidth = (int) Math.min(cropWidth, imageSize.width - cropX);
-        cropHeight = (int) Math.min(cropHeight, imageSize.height - cropY);
-        
-        return new Rect(cropX, cropY, cropWidth, cropHeight);
-    }
 }

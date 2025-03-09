@@ -11,6 +11,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
   const aspectRatioOptions = [
+    { label: '35×45mm Passport', value: 35/45 },
     { label: '1:1 Square', value: 1 },
     { label: '4:3 Standard', value: 4/3 },
     { label: '16:9 Widescreen', value: 16/9 },
@@ -20,7 +21,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
 
   const handleStartCrop = () => {
     setIsCropMode(true);
-    setAspectRatio(1); // Default to 1:1 when entering crop mode
+    setAspectRatio(35/45); // Change default to passport size
   };
 
   const handleAutoDetect = async () => {
@@ -49,14 +50,14 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
         }
       }
       
-      const response = await fetch('/api/auto-crop/detect-face', {
+      const response = await fetch('/api/auto-crop/improved-detect-face', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           image: imageData,
-          aspectRatio: 1 // Default to square crop
+          aspectRatio: 35/45 // Change to passport photo ratio
         }),
       });
       
@@ -64,7 +65,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       
       if (response.ok) {
         setIsCropMode(true);
-        setAspectRatio(1);
+        setAspectRatio(35/45); // Set to passport ratio instead of square
         
         // Wait for the cropper to be ready
         setTimeout(() => {
