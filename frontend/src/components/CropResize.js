@@ -1,14 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import './CropResize.css';
 import ImageGallery from './ImageGallery';
 
-function CropResize({ images, setImages }) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex }) {
   const [isCropMode, setIsCropMode] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(null);
   const cropperRef = useRef(null);
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
   const aspectRatioOptions = [
     { label: '1:1 Square', value: 1 },
@@ -23,9 +23,76 @@ function CropResize({ images, setImages }) {
     setAspectRatio(1); // Default to 1:1 when entering crop mode
   };
 
+  const handleAutoDetect = async () => {
+    if (!images[currentImageIndex]) return;
+    
+    setIsAutoDetecting(true);
+    
+    try {
+      // Convert image URL to proper data URL if needed
+      let imageData = images[currentImageIndex].url;
+      
+      // If the URL is not already a data URL (doesn't start with 'data:'), 
+      // fetch it and convert it to a data URL
+      if (!imageData.startsWith('data:')) {
+        try {
+          const response = await fetch(imageData);
+          const blob = await response.blob();
+          imageData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.error("Error converting image to data URL:", err);
+          throw new Error("Could not process image data");
+        }
+      }
+      
+      const response = await fetch('/api/auto-crop/detect-face', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: imageData,
+          aspectRatio: 1 // Default to square crop
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setIsCropMode(true);
+        setAspectRatio(1);
+        
+        // Wait for the cropper to be ready
+        setTimeout(() => {
+          const cropper = cropperRef.current?.cropper;
+          if (cropper) {
+            const { x, y, width, height } = data.cropData;
+            cropper.setCropBoxData({
+              left: x,
+              top: y,
+              width,
+              height
+            });
+          }
+        }, 200);
+      } else {
+        console.error("Face detection failed:", data.error);
+      }
+    } catch (error) {
+      console.error("Error contacting auto-crop API:", error);
+    } finally {
+      setIsAutoDetecting(false);
+    }
+  };
+
   const handleAspectRatioChange = (ratio) => {
     setAspectRatio(ratio);
     const cropper = cropperRef.current?.cropper;
+    
     if (cropper) {
       cropper.setAspectRatio(ratio);
       if (ratio === null) {
@@ -66,6 +133,11 @@ function CropResize({ images, setImages }) {
     if (!isCropMode) {
       setCurrentImageIndex(index);
     }
+  };
+
+  const handleContinue = () => {
+    // Navigate to next component
+    window.location.href = '#background-remover';
   };
 
   return (
@@ -111,7 +183,14 @@ function CropResize({ images, setImages }) {
             {!isCropMode ? (
               <div className="standard-controls">
                 <button onClick={handleStartCrop} className="control-button primary">
-                  Crop this photo
+                  Crop Manually
+                </button>
+                <button 
+                  onClick={handleAutoDetect} 
+                  className="control-button primary auto-detect"
+                  disabled={isAutoDetecting}
+                >
+                  {isAutoDetecting ? 'Detecting...' : 'Auto-Detect Face'}
                 </button>
               </div>
             ) : (
@@ -148,7 +227,7 @@ function CropResize({ images, setImages }) {
         />
 
         <div className="continue-button-container">
-          <button className="continue-button">
+          <button className="continue-button" onClick={handleContinue}>
             Continue to Background Remover
           </button>
         </div>

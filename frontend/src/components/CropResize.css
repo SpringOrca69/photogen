@@ -239,3 +239,24 @@
 .standard-controls {
   padding: 10px 0;
 }
+
+/* Add to your existing CSS */
+
+.standard-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.auto-detect {
+  background-color: #2196F3;
+}
+
+.auto-detect:hover {
+  background-color: #0d8bf2;
+}
+
+.auto-detect:disabled {
+  background-color: #9e9e9e;
+  cursor: not-allowed;
+}
