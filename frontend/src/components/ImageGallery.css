@@ -53,3 +53,12 @@
   border-radius: 3px;
   margin-top: 5px;
 }
+
+.thumbnail-card:not(.active):hover {
+  border-color: #ccc;
+}
+
+.thumbnail-card:(.active):hover {
+  border-color: #007bff;
+  box-shadow: 0 20px 10px rgba(0, 0, 0, 0.05);
+}

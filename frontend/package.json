@@ -9,6 +9,8 @@
     "@testing-library/user-event": "^13.5.0",
     "@wellbees/color-picker-input": "^1.0.3",
     "cropperjs": "^1.6.2",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-cropper": "^2.3.3",
     "react-dom": "^18.2.0",

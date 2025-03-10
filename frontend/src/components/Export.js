@@ -1,161 +1,97 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import './Export.css';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import ImageGallery from './ImageGallery';
+import ExportContainer from './ExportContainer';
 
 const Export = ({ images, currentImageIndex }) => {
-    const [filename, setFilename] = useState('');
-    const [format, setFormat] = useState('jpeg');
-    const [scale, setScale] = useState(100);
-    const [quality, setQuality] = useState(100);
-    const [exportedImage, setExportedImage] = useState(null);
-    const [fileSize, setFileSize] = useState(null);
-    const [resolution, setResolution] = useState({ width: 0, height: 0 });
-    const [selectedImageIndex, setSelectedImageIndex] = useState(currentImageIndex);
+const [selectedIndices, setSelectedIndices] = useState([]);
 
+const exportRefs = useRef({});
 
-    useEffect(() => {
-        if (images.length > 0) {
-            const latestImage = images[currentImageIndex];
-            setExportedImage(latestImage.url);
-
-            const originalName = latestImage.name ? latestImage.name.split('.')[0] : 'Untitled';
-            setFilename(`PhotoGen — ${originalName}`);
-
-            setSelectedImageIndex(currentImageIndex);
-        }
-    }, [images, currentImageIndex]);
-
-    useEffect(() => {
-        if (exportedImage) {
-            estimateFileSize();
-        }
-    }, [exportedImage]);
-
-    useEffect(() => {
-        estimateFileSize();
-    }, [scale, quality, format]);
-
-    const estimateFileSize = () => {
-        if (!exportedImage) return;
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = exportedImage;
-
-        img.onload = () => {
-            canvas.width = (img.width * scale) / 100;
-            canvas.height = (img.height * scale) / 100;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            setResolution({ width: canvas.width, height: canvas.height });
-
-            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality / 100 : 1);
-            setFileSize((dataUrl.length * (3 / 4) / 1024).toFixed(2));
-        };
-    };
-
-    const processImage = () => {
-        if (!exportedImage) return;
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = exportedImage;
-
-        img.onload = () => {
-            canvas.width = (img.width * scale) / 100;
-            canvas.height = (img.height * scale) / 100;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality / 100 : 1);
-
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = `${filename.trim() || 'PhotoGen -- Exported'}.${format}`;
-            link.click();
-        };
-    };
-
-    return (
-        <>
-            <div className="export-container">
-                <div className="export-left">
-                    {exportedImage && (
-                        <div className="export-preview">
-                            <h3>Preview</h3>
-                            <img src={exportedImage} alt="Exported preview" className="exported-image" />
-                        </div>
-                    )}
-                </div>
-
-                <div className="export-right">
-                    <h2>Export Image</h2>
-                    <div className="export-options">
-                        <input
-                            type="text"
-                            placeholder="Filename"
-                            value={filename}
-                            onChange={(e) => setFilename(e.target.value)}
-                        />
-                        <select value={format} onChange={(e) => setFormat(e.target.value)}>
-                            <option value="jpeg">JPEG</option>
-                            <option value="png">PNG</option>
-                        </select>
-                    </div>
-
-                    <div className="slider-container">
-                        <label>Size: {scale}%</label>
-                        <input
-                            type="range"
-                            min="10"
-                            max="200"
-                            step="10"
-                            value={scale}
-                            onChange={(e) => setScale(parseInt(e.target.value))}
-                        />
-                        <span>{resolution.width} × {resolution.height} px</span>
-                    </div>
-
-                    {format === 'jpeg' && (
-                        <div className="slider-container">
-                            <label>Quality: {quality}%</label>
-                            <input
-                                type="range"
-                                min="10"
-                                max="100"
-                                step="5"
-                                value={quality}
-                                onChange={(e) => setQuality(parseInt(e.target.value))}
-                            />
-                        </div>
-                    )}
-
-                    <p>Estimated file size: {fileSize ? `${fileSize} KB` : 'Calculating...'}</p>
-                    <button onClick={processImage}>Download Image</button>
-                </div>
-            </div>
-
-            {/* Image Gallery below Export UI */}
-            <ImageGallery
-                images={images}
-                currentImageIndex={selectedImageIndex}
-                isEditMode={false}
-                handleThumbnailClick={(index) => {
-                    setExportedImage(images[index]?.url);
-                    setSelectedImageIndex(index);
-
-                    // ✅ Set the new filename based on selected image
-                    const originalName = images[index]?.name ? images[index].name.split('.')[0] : 'Untitled';
-                    setFilename(`PhotoGen — ${originalName}`);
-                }}
-                />
-
-
-        </>
+const toggleImageSelection = (index) => {
+    setSelectedIndices((prev) =>
+    prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
 };
 
+const handleExportZip = async (exportAll = false) => {
+    const zip = new JSZip();
+    const folder = zip.folder('PhotoGen_Export');
+
+    const indicesToExport = exportAll
+    ? images.map((_, i) => i)
+    : selectedIndices;
+
+    for (let index of indicesToExport) {
+    const ref = exportRefs.current[index];
+    if (ref && ref.getProcessedBlobAndFilename) {
+        const { blob, filename } = await ref.getProcessedBlobAndFilename();
+        folder.file(filename, blob);
+    }
+    }
+
+    zip.generateAsync({ type: 'blob' }).then((content) => {
+    saveAs(content, exportAll ? 'All_PhotoGen_Images.zip' : 'Selected_PhotoGen_Images.zip');
+    });
+};
+
+return (
+    <>
+    {/* ZIP Export Buttons */}
+    <div className="export-buttons-container">
+        <button
+        className="export-zip-btn"
+        onClick={() => handleExportZip(false)}
+        disabled={selectedIndices.length === 0}
+        >
+        Export Selected
+        </button>
+        <button className="export-zip-btn" onClick={() => handleExportZip(true)}>
+        Export All
+        </button>
+    </div>
+
+    {/* Export Containers for selected images */}
+    <div className="export-multiple-container">
+        {selectedIndices.map((index) => (
+        <ExportContainer
+            key={index}
+            ref={(el) => (exportRefs.current[index] = el)}
+            image={images[index]}
+        />
+        ))}
+    </div>
+
+    {/* Hidden ExportContainers for Export All */}
+    <div style={{ visibility: 'hidden', height: 0, overflow: 'hidden' }}>
+        {images.map((image, index) => {
+        if (!selectedIndices.includes(index)) {
+            return (
+            <ExportContainer
+                key={`hidden-${index}`}
+                ref={(el) => (exportRefs.current[index] = el)}
+                image={image}
+            />
+            );
+        }
+        return null;
+        })}
+    </div>
+
+    {/* Image Gallery */}
+    <ImageGallery
+        images={images}
+        selectedIndices={selectedIndices}
+        isEditMode={false}
+        handleThumbnailClick={toggleImageSelection}
+    />
+    </>
+);
+};
+
 export default Export;
+
 
 
