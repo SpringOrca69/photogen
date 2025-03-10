@@ -107,3 +107,41 @@ button:hover {
     }
 }
 
+/* Mini Gallery Below Preview */
+.export-gallery {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.export-gallery h4 {
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.export-thumbnails {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.export-thumb {
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.export-thumb.active {
+    border-color: #007bff;
+}
+
+.export-thumb img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+
+
