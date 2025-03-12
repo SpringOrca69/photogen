@@ -9,6 +9,8 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const [aspectRatio, setAspectRatio] = useState(null);
   const cropperRef = useRef(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+  const [cropperReady, setCropperReady] = useState(false);
+  const [pendingCropData, setPendingCropData] = useState(null);
 
   const aspectRatioOptions = [
     { label: '35×45mm Passport', value: 35/45 },
@@ -19,9 +21,21 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     { label: 'Free Size', value: null }
   ];
 
+  // Apply pending crop data when cropper is ready
+  useEffect(() => {
+    if (cropperReady && pendingCropData) {
+      const cropper = cropperRef.current?.cropper;
+      if (cropper) {
+        cropper.setCropBoxData(pendingCropData);
+        setPendingCropData(null);
+      }
+    }
+  }, [cropperReady, pendingCropData]);
+
   const handleStartCrop = () => {
     setIsCropMode(true);
     setAspectRatio(35/45); // Change default to passport size
+    setCropperReady(false);
   };
 
   const handleAutoDetect = async () => {
@@ -50,14 +64,14 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
         }
       }
       
-      const response = await fetch('/api/auto-crop/improved-detect-face', {
+      const response = await fetch('/api/auto-crop/detect-face', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           image: imageData,
-          aspectRatio: 35/45 // Change to passport photo ratio
+          aspectRatio: 35/45 // Set to passport photo ratio
         }),
       });
       
@@ -65,26 +79,27 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       
       if (response.ok) {
         setIsCropMode(true);
-        setAspectRatio(35/45); // Set to passport ratio instead of square
+        setAspectRatio(35/45); 
+        setCropperReady(false);
         
-        // Wait for the cropper to be ready
-        setTimeout(() => {
-          const cropper = cropperRef.current?.cropper;
-          if (cropper) {
-            const { x, y, width, height } = data.cropData;
-            cropper.setCropBoxData({
-              left: x,
-              top: y,
-              width,
-              height
-            });
-          }
-        }, 200);
+        const { x, y, width, height } = data.cropData;
+        
+        // Store crop data to be applied when cropper is ready
+        setPendingCropData({
+          left: x,
+          top: y,
+          width,
+          height
+        });
+        
+        console.log(`Face detected - setting crop box at (${x},${y}) with size ${width}x${height}`);
       } else {
         console.error("Face detection failed:", data.error);
+        alert("No face detected. Please try a different image or crop manually.");
       }
     } catch (error) {
       console.error("Error contacting auto-crop API:", error);
+      alert("Error detecting face. Please try again or crop manually.");
     } finally {
       setIsAutoDetecting(false);
     }
@@ -105,6 +120,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const handleCancelCrop = () => {
     setIsCropMode(false);
     setAspectRatio(null);
+    setPendingCropData(null);
   };
 
   const handleSaveCrop = () => {
@@ -127,6 +143,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
 
       setIsCropMode(false);
       setAspectRatio(null);
+      setPendingCropData(null);
     }
   };
 
@@ -165,7 +182,10 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
                   zoomable={false}
                   ready={() => {
                     const cropper = cropperRef.current?.cropper;
-                    cropper?.setAspectRatio(aspectRatio);
+                    if (cropper) {
+                      cropper.setAspectRatio(aspectRatio);
+                      setCropperReady(true);
+                    }
                   }}
                 />
               ) : (

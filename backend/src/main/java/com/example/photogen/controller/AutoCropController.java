@@ -1,16 +1,15 @@
 package com.example.photogen.controller;
 
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.HashMap;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfRect;
-import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -36,557 +35,273 @@ public class AutoCropController {
     }
 
     @PostMapping("/detect-face")
-    public ResponseEntity<?> detectAndCenterFace(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> removeBackground(@RequestBody Map<String, String> payload) {
         try {
-            String imageString = payload.get("image");
-            if (imageString == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "No image data provided"));
-            }
+            String backgroundColour = payload.getOrDefault("backgroundColour", "#FFFFFF");
+            Double aspectRatio = payload.containsKey("aspectRatio") ? 
+                Double.parseDouble(payload.get("aspectRatio")) : 35.0/45.0;
 
-            // Handle data URL format safely
-            String[] parts = imageString.split(",");
-            String imageData = parts.length > 1 ? parts[1] : parts[0];
-            
-            byte[] inputImageBytes;
-            try {
-                inputImageBytes = Base64.getDecoder().decode(imageData);
-            } catch (IllegalArgumentException e) {
-                logger.error("Base64 decoding failed", e);
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid base64 image data"));
-            }
-            
+            String imageData = payload.get("image").split(",")[1];
+            byte[] inputImageBytes = java.util.Base64.getDecoder().decode(imageData);
             Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
             
-            if (inputImage.empty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Could not decode image"));
+            Mat customBackground;
+            if (payload.get("customBackground") != null) {
+                String backgroundData = payload.get("customBackground").split(",")[1];
+                byte[] backgroundImageBytes = java.util.Base64.getDecoder().decode(backgroundData);
+                customBackground = Imgcodecs.imdecode(new MatOfByte(backgroundImageBytes), Imgcodecs.IMREAD_COLOR);
+            } 
+            else {
+                customBackground = null;
             }
 
-            // Get face position
-            CascadeClassifier faceDetector;
-            try {
-                String resourcePath = getClass().getResource("/haarcascade_frontalface_default.xml").getPath();
-                // Handle Windows path issues
-                if (resourcePath.startsWith("/") && System.getProperty("os.name").toLowerCase().contains("win")) {
-                    resourcePath = resourcePath.substring(1);
-                }
-                faceDetector = new CascadeClassifier(resourcePath);
-                if (faceDetector.empty()) {
-                    logger.error("Failed to load face cascade classifier");
-                    return ResponseEntity.internalServerError().body(Map.of("error", "Failed to load face detection model"));
-                }
-            } catch (Exception e) {
-                logger.error("Error loading cascade classifier", e);
-                return ResponseEntity.internalServerError().body(Map.of("error", "Failed to initialize face detector: " + e.getMessage()));
-            }
-            
-            // Try multiple detection parameters for better reliability
+            // Detect face and calculate crop coordinates
+            CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/haarcascade_frontalface_default.xml").getPath().substring(1));
             MatOfRect faceDetections = new MatOfRect();
-            double[] scaleFactors = {1.1, 1.2, 1.3};
-            int[] minNeighbors = {5, 4, 3};
-            boolean faceFound = false;
             
-            for (double scaleFactor : scaleFactors) {
-                for (int neighbor : minNeighbors) {
-                    if (!faceFound) {
-                        faceDetector.detectMultiScale(
-                            inputImage, 
-                            faceDetections,
-                            scaleFactor,
-                            neighbor,
-                            0,
-                            new Size(30, 30),
-                            new Size()
-                        );
-                        
-                        if (!faceDetections.empty()) {
-                            faceFound = true;
-                            logger.info("Face found with scaleFactor={}, minNeighbors={}", scaleFactor, neighbor);
-                            break;
-                        }
-                    }
-                }
-                if (faceFound) break;
-            }
+            // First try detection with normal settings
+            faceDetector.detectMultiScale(inputImage, faceDetections);
             
-            if (!faceFound) {
-                // Try with more lenient parameters for difficult cases
-                faceDetector.detectMultiScale(
-                    inputImage, 
-                    faceDetections,
-                    1.1,
-                    2,
-                    0,
-                    new Size(20, 20),
-                    new Size()
-                );
+            // If no face detected, try with more aggressive settings
+            if (faceDetections.empty()) {
+                faceDetector.detectMultiScale(inputImage, faceDetections, 
+                    1.1,  // scale factor (smaller = more detections)
+                    3,    // min neighbors (smaller = more detections)
+                    0,    // flags
+                    new Size(30, 30), // min size
+                    new Size());      // max size
             }
             
             if (faceDetections.empty()) {
-                // No face detected, return original image with center coordinates
-                logger.info("No faces detected, using center of image");
-                Map<String, Object> cropData = new HashMap<>();
-                cropData.put("x", inputImage.width() / 4);
-                cropData.put("y", inputImage.height() / 4);
-                cropData.put("width", inputImage.width() / 2);
-                cropData.put("height", inputImage.height() / 2);
-                
-                Map<String, Object> response = new HashMap<>();
-                response.put("cropData", cropData);
-                response.put("message", "No face detected, using default center crop");
-                
-                return ResponseEntity.ok(response);
+                throw new IllegalArgumentException("No faces detected");
             }
 
-            // Find largest face
-            Rect[] faces = faceDetections.toArray();
-            if (faces.length == 0) {
-                // Safety check - should not happen as we already checked faceDetections.empty()
-                logger.warn("No faces in array despite non-empty MatOfRect");
-                Map<String, Object> cropData = new HashMap<>();
-                cropData.put("x", inputImage.width() / 4);
-                cropData.put("y", inputImage.height() / 4);
-                cropData.put("width", inputImage.width() / 2);
-                cropData.put("height", inputImage.height() / 2);
-                
-                Map<String, Object> response = new HashMap<>();
-                response.put("cropData", cropData);
-                response.put("message", "Face detection issue, using default center crop");
-                
-                return ResponseEntity.ok(response);
-            }
-            
             // Find the largest face
-            Rect faceRect = faces[0];
-            for (Rect rect : faces) {
+            Rect faceRect = faceDetections.toArray()[0];
+            for (Rect rect : faceDetections.toArray()) {
                 if (rect.area() > faceRect.area()) {
                     faceRect = rect;
                 }
             }
+
+            // Calculate dimensions based on aspect ratio
+            int cropWidth, cropHeight;
+            if (aspectRatio != null) {
+                // For passport photos, we want enough space above the head
+                // and down to include most of the upper body
+                double faceHeightToTotalRatio = 0.5; // Face takes about 50% of photo height
+                cropHeight = (int)(faceRect.height / faceHeightToTotalRatio);
+                cropWidth = (int)(cropHeight * aspectRatio);
+                
+                // Ensure we don't exceed image dimensions
+                cropHeight = Math.min(cropHeight, inputImage.height());
+                cropWidth = Math.min(cropWidth, inputImage.width());
+            } else {
+                // Default to a reasonable size if no aspect ratio provided
+                cropWidth = (int)(faceRect.width * 3.0);
+                cropHeight = (int)(faceRect.height * 4.0);
+            }
+
+            // Calculate the crop box position centered on the face
+            // For passport photos, center horizontally but position the face at about 1/3 from the top
+            int x = Math.max(0, faceRect.x + faceRect.width/2 - cropWidth/2);
+            int y = Math.max(0, faceRect.y + (int)(faceRect.height * 0.4) - cropHeight/3);
             
-            // Calculate optimal crop area (centered on face)
-            int aspectRatio = 1; // Default to square
-            try {
-                String aspectRatioStr = payload.getOrDefault("aspectRatio", "1");
-                aspectRatio = Integer.parseInt(aspectRatioStr);
-            } catch (NumberFormatException e) {
-                logger.warn("Invalid aspect ratio, defaulting to 1:1");
+            // Ensure the crop box doesn't extend beyond the image boundaries
+            if (x + cropWidth > inputImage.width()) {
+                x = inputImage.width() - cropWidth;
+            }
+            if (y + cropHeight > inputImage.height()) {
+                y = inputImage.height() - cropHeight;
             }
             
-            Rect cropRect = calculateOptimalCrop(inputImage.size(), faceRect, aspectRatio);
-            
-            logger.info("Face detected at: " + faceRect.toString());
-            logger.info("Optimal crop: " + cropRect.toString());
+            // Ensure x and y are not negative
+            x = Math.max(0, x);
+            y = Math.max(0, y);
 
-            Map<String, Object> cropData = new HashMap<>();
-            cropData.put("x", cropRect.x);
-            cropData.put("y", cropRect.y);
-            cropData.put("width", cropRect.width);
-            cropData.put("height", cropRect.height);
-            
+            // Prepare the response with both image data and crop coordinates
             Map<String, Object> response = new HashMap<>();
-            response.put("cropData", cropData);
-            response.put("message", "Face detected and crop calculated");
+            response.put("cropData", Map.of(
+                "x", x,
+                "y", y,
+                "width", cropWidth,
+                "height", cropHeight
+            ));
+            
+            // If requested, also process the image
+            if (Boolean.parseBoolean(payload.getOrDefault("processImage", "false"))) {
+                String dataUrl = processUserDrawing(inputImage, customBackground, backgroundColour);
+                response.put("processedImageDataUrl", dataUrl);
+            }
+            
+            response.put("message", "Face detected successfully");
             
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Face detection failed: " + e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error detecting face", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", "Face detection failed: " + e.getMessage()));
+            logger.error("Processing failed", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Processing failed: " + e.getMessage()));
         }
     }
 
-    private Rect calculateOptimalCrop(Size imageSize, Rect faceRect, int aspectRatio) {
-        // Create a copy of face rectangle for reference
-        Rect originalFaceRect = new Rect(faceRect.x, faceRect.y, faceRect.width, faceRect.height);
+    private String processUserDrawing(Mat drawnImage, Mat customBackground, String backgroundColour) {
+        if (drawnImage.empty()) {
+            throw new IllegalArgumentException("Empty image");
+        }
+
+        if (customBackground != null && customBackground.empty()) {
+            throw new IllegalArgumentException("Empty custom background image");
+        }
+
+        // Create a new Mat object to store the result depending on whether a custom background is provided
+        Mat result;
+        if (customBackground != null) {
+            Mat resizedBackground = resizeImage(customBackground, drawnImage.width(), drawnImage.height());
+
+            if (resizedBackground.width() != drawnImage.width() || resizedBackground.height() != drawnImage.height()) {
+                throw new IllegalArgumentException("Custom background image size does not match original image size");
+            }
+
+            result = resizedBackground.clone();
+        }
+        else {
+            result = new Mat(drawnImage.size(), drawnImage.type(), parseColor(backgroundColour));
+        }
+
+        CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/haarcascade_frontalface_default.xml").getPath().substring(1));
+        MatOfRect faceDetections = new MatOfRect();
+        faceDetector.detectMultiScale(drawnImage, faceDetections);
         
-        // Expand the face rectangle to better cover the whole face
-        // Forehead is often not fully detected, so add more padding at the top
-        int expandTopPercentage = 50; // 50% more space above the face for forehead
-        int expandSidesPercentage = 20; // 20% more space on each side
-        int expandBottomPercentage = 30; // 30% more space below the face for chin
+        if (faceDetections.empty()) {
+            throw new IllegalArgumentException("No faces detected");
+        }
+
+        Rect faceRect = faceDetections.toArray()[0];
+        for (Rect rect : faceDetections.toArray()) {
+            if (rect.area() > faceRect.area()) {
+                faceRect = rect;
+            }
+        }
+
+        Mat faceImage = drawnImage.clone();
+        Mat faceImageClone = faceImage.clone();
         
-        int expandedX = Math.max(0, originalFaceRect.x - (originalFaceRect.width * expandSidesPercentage / 100));
-        int expandedY = Math.max(0, originalFaceRect.y - (originalFaceRect.height * expandTopPercentage / 100));
-        int expandedWidth = Math.min((int)imageSize.width - expandedX, 
-                                   originalFaceRect.width * (100 + 2 * expandSidesPercentage) / 100);
-        int expandedHeight = Math.min((int)imageSize.height - expandedY,
-                                    originalFaceRect.height * (100 + expandTopPercentage + expandBottomPercentage) / 100);
-        
-        // Update the face rectangle with the expanded one
-        Rect expandedFaceRect = new Rect(expandedX, expandedY, expandedWidth, expandedHeight);
-        
-        // Calculate face center point - ALWAYS center on this point
-        Point faceCenter = new Point(
-            expandedFaceRect.x + expandedFaceRect.width / 2.0,
-            expandedFaceRect.y + expandedFaceRect.height / 2.0
-        );
-        
-        // For passport photos, face should occupy appropriate percentage of image height
-        // Standard for passport: face height should be 70-80% of photo height
-        double faceHeightPercentage = 0.7; // Reduced from 0.75 to give more padding
-        
-        // Calculate crop size based on face dimensions with better padding
-        double faceSizeFactor;
-        if (aspectRatio > 100 || (double)aspectRatio == 35.0/45.0) {  // Passport ratio (35/45)
-            // Increased padding for passport photos
-            faceSizeFactor = 1.8 / faceHeightPercentage;  // More padding around the face
+        if (faceRect.height < 0.6 * drawnImage.height()) {
+            Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
+            Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
+            Mat clothesImage = drawnImage.clone();
+            Mat clothesImageClone = clothesImage.clone();
+            
+            Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
+            faceImageClone.copyTo(result, faceForegroundMask);
+            
+            Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
+            clothesImageClone.copyTo(result, clothesForegroundMask);
         } else {
-            faceSizeFactor = 4.0;  // Increased from 3.5 to allow more space around the face
-        }
-        
-        // Ensure we have enough space around the face by using the larger dimension
-        int cropSize = (int) Math.max(expandedFaceRect.height * faceSizeFactor, 
-                                      expandedFaceRect.width * faceSizeFactor * 1.8); // Increased multiplier
-        
-        // Ensure minimum crop size for faces detected too small
-        int minSize = (int) Math.min(imageSize.width, imageSize.height) / 2;
-        cropSize = Math.max(cropSize, minSize);
-        
-        // Calculate dimensions based on aspect ratio
-        int cropWidth, cropHeight;
-        
-        // Handle different aspect ratios
-        if (aspectRatio == 1) { // 1:1 square
-            cropWidth = cropHeight = cropSize;
-        } else if (aspectRatio == 4 || aspectRatio == 43) { // 4:3 or 3:4
-            if (aspectRatio == 4) {
-                cropWidth = (int) (cropSize * (4.0 / 3.0));
-                cropHeight = cropSize;
-            } else { // 3:4
-                cropWidth = cropSize;
-                cropHeight = (int) (cropSize * (4.0 / 3.0));
-            }
-        } else if (aspectRatio == 16 || aspectRatio == 169) { // 16:9 or 9:16
-            if (aspectRatio == 16) {
-                cropWidth = (int) (cropSize * (16.0 / 9.0));
-                cropHeight = cropSize;
-            } else { // 9:16
-                cropWidth = cropSize;
-                cropHeight = (int) (cropSize * (16.0 / 9.0));
-            }
-        } else { // Custom aspect ratio (like 35/45 for passport)
-            // Parse numerator and denominator if available
-            double aspectRatioValue;
-            if (aspectRatio > 100) { // Special case for fractional values stored as integers
-                aspectRatioValue = aspectRatio / 1000.0;
-            } else if (Math.abs((double)aspectRatio - 35.0/45.0) < 0.001) {
-                aspectRatioValue = 35.0/45.0;  // Exact passport ratio
-            } else {
-                aspectRatioValue = (double) aspectRatio;
-            }
-            
-            // For passport photos (aspect ratio 35:45 ≈ 0.778)
-            if (Math.abs(aspectRatioValue - 35.0/45.0) < 0.001) {
-                cropWidth = (int) (cropSize * aspectRatioValue);
-                cropHeight = cropSize;
-                
-                // For passport photos, position face according to standards
-                // Estimate eye position (approximately 40% from top of face)
-                double estimatedEyeY = expandedFaceRect.y + expandedFaceRect.height * 0.4;
-                
-                // Position eyes at 45% of the image height from top (standard for passport photos)
-                double eyePositionFactor = 0.45;
-                int desiredEyeY = (int)(cropHeight * eyePositionFactor);
-                
-                // Adjust face center to position eyes at the standard position
-                faceCenter = new Point(
-                    faceCenter.x,
-                    estimatedEyeY + (desiredEyeY - estimatedEyeY)
-                );
-            } else if (aspectRatioValue < 1) {
-                cropWidth = (int) (cropSize * aspectRatioValue);
-                cropHeight = cropSize;
-            } else {
-                cropWidth = cropSize;
-                cropHeight = (int) (cropSize / aspectRatioValue);
-            }
-        }
-        
-        // ALWAYS center crop rectangle on the face center point
-        int cropX = (int) Math.round(faceCenter.x - cropWidth / 2.0);
-        int cropY = (int) Math.round(faceCenter.y - cropHeight / 2.0);
-        
-        // Apply boundary constraints while trying to keep the face centered
-        if (cropX < 0) {
-            cropX = 0;
-        } else if (cropX + cropWidth > imageSize.width) {
-            cropX = (int)imageSize.width - cropWidth;
-        }
-        
-        if (cropY < 0) {
-            cropY = 0;
-        } else if (cropY + cropHeight > imageSize.height) {
-            cropY = (int)imageSize.height - cropHeight;
-        }
-        
-        // Make sure the face is always fully contained within the crop
-        // If not, adjust the crop position while maintaining aspect ratio
-        if (!isRectFullyContained(expandedFaceRect, new Rect(cropX, cropY, cropWidth, cropHeight))) {
-            // Adjust X if needed
-            if (cropX > expandedFaceRect.x) {
-                cropX = Math.max(0, expandedFaceRect.x - (int)(expandedFaceRect.width * 0.2)); // 20% padding
-            }
-            if (cropX + cropWidth < expandedFaceRect.x + expandedFaceRect.width) {
-                int newWidth = (int)(expandedFaceRect.x + expandedFaceRect.width * 1.2) - cropX; // 20% padding
-                cropWidth = Math.min(newWidth, (int)imageSize.width - cropX);
-            }
-            
-            // Adjust Y if needed
-            if (cropY > expandedFaceRect.y) {
-                cropY = Math.max(0, expandedFaceRect.y - (int)(expandedFaceRect.height * 0.2)); // 20% padding
-            }
-            if (cropY + cropHeight < expandedFaceRect.y + expandedFaceRect.height) {
-                int newHeight = (int)(expandedFaceRect.y + expandedFaceRect.height * 1.2) - cropY; // 20% padding
-                cropHeight = Math.min(newHeight, (int)imageSize.height - cropY);
-            }
+            Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.7, 1.2);
+            Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
+            faceImageClone.copyTo(result, faceForegroundMask);
         }
 
-        // Final adjustments to ensure we don't exceed image bounds
-        cropX = Math.max(0, cropX);
-        cropY = Math.max(0, cropY);
-        cropWidth = Math.min(cropWidth, (int)imageSize.width - cropX);
-        cropHeight = Math.min(cropHeight, (int)imageSize.height - cropY);
+        String uniqueFileName = UUID.randomUUID().toString() + ".jpg";
+        String outputPath = "src/main/resources/processed/" + uniqueFileName;
+        Imgcodecs.imwrite(outputPath, result);
+        logger.info("Image saved at: " + outputPath);
+
+        MatOfByte matOfByte = new MatOfByte();
+        Imgcodecs.imencode(".jpg", result, matOfByte);
+        byte[] byteArray = matOfByte.toArray();
+        String base64Image = Base64.getEncoder().encodeToString(byteArray);
+
+        String dataUrl = "data:image/jpeg;base64," + base64Image;
+
+        return dataUrl;
+    }
+
+    private Rect expandFaceRegion(Rect faceRect, Size imageSize, double verticalExpansion, double horizontalExpansion) {
+        // Calculate expanded dimensions
+        int newWidth = (int) (faceRect.width * horizontalExpansion);
+        int newHeight = (int) (faceRect.height * verticalExpansion);
         
-        return new Rect(cropX, cropY, cropWidth, cropHeight);
+        // Center the expanded rectangle on the face (important for centering)
+        int newX = Math.max(0, faceRect.x + faceRect.width/2 - newWidth/2);
+        int newY = Math.max(0, faceRect.y + faceRect.height/2 - newHeight/2);
+        
+        // Ensure the crop box doesn't extend beyond image boundaries
+        newWidth = Math.min(newWidth, (int)(imageSize.width - newX));
+        newHeight = Math.min(newHeight, (int)(imageSize.height - newY));
+        
+        // Create the expanded rectangle
+        return new Rect(newX, newY, newWidth, newHeight);
+    }
+
+    private Rect clothesRegion(Rect faceRect, Size imageSize) {
+        // Expand both horizontally and vertically
+        double horizontalExpansion = 2.7;
+
+        int newWidth = (int) (faceRect.width * horizontalExpansion);
+        int newX = Math.max(0, faceRect.x - (newWidth - faceRect.width) / 2);
+        newWidth = Math.min(newWidth, (int) (imageSize.width - newX));
+        newWidth = Math.max(newWidth, 0);
+    
+        int newY = faceRect.y + faceRect.height - 20;
+        int newHeight = (int) (imageSize.height - newY);
+        newHeight = Math.max(newHeight, 0);
+    
+        return new Rect(newX, newY, newWidth, newHeight);
+    }
+
+    private Scalar parseColor(String colorString) {
+        if (colorString.startsWith("#")) {
+            // Handle hex color code
+            String hex = colorString.substring(1); // Remove the #
+            int r = Integer.parseInt(hex.substring(0, 2), 16);
+            int g = Integer.parseInt(hex.substring(2, 4), 16);
+            int b = Integer.parseInt(hex.substring(4, 6), 16);
+            return new Scalar(b, g, r); // OpenCV uses BGR order
+        } else {
+            // Handle comma-separated format
+            String[] rgb = colorString.split(",");
+            return new Scalar(Double.parseDouble(rgb[2]), Double.parseDouble(rgb[1]), Double.parseDouble(rgb[0]));
+        }
     }
     
-    // Helper method to check if a point is inside a rectangle
-    private boolean isPointInRect(Point p, Rect r) {
-        return p.x >= r.x && p.x < (r.x + r.width) && 
-               p.y >= r.y && p.y < (r.y + r.height);
-    }
+
+    private Mat grabCut(Mat image, Rect rect) {
+        Mat mask = new Mat(image.size(), CvType.CV_8UC1, new Scalar(Imgproc.GC_BGD));
+        Imgproc.rectangle(mask, rect.tl(), rect.br(), new Scalar(Imgproc.GC_PR_FGD), -1);
+
+        Mat imageClone = image.clone();
+        Imgproc.rectangle(imageClone, rect.tl(), rect.br(), new Scalar(0, 255, 0), 3);
     
-    // Helper method to check if a rectangle is fully contained within another
-    private boolean isRectFullyContained(Rect innerRect, Rect outerRect) {
-        return innerRect.x >= outerRect.x &&
-               innerRect.y >= outerRect.y &&
-               (innerRect.x + innerRect.width) <= (outerRect.x + outerRect.width) &&
-               (innerRect.y + innerRect.height) <= (outerRect.y + outerRect.height);
-    }
+        Mat bgdModel = new Mat();
+        Mat fgdModel = new Mat();
+        int grabCutIterations = 50;
+    
+        Imgproc.grabCut(image, mask, rect, bgdModel, fgdModel, grabCutIterations, Imgproc.GC_INIT_WITH_MASK | Imgproc.GC_INIT_WITH_RECT);
+    
+        Mat foregroundMask = new Mat(mask.size(), CvType.CV_8UC1, new Scalar(0));
+        Core.compare(mask, new Scalar(Imgproc.GC_PR_FGD), foregroundMask, Core.CMP_EQ);
+    
+        Mat fgdMask = new Mat(mask.size(), CvType.CV_8UC1, new Scalar(0));
+        Core.compare(mask, new Scalar(Imgproc.GC_FGD), fgdMask, Core.CMP_EQ);
+    
+        Core.bitwise_or(foregroundMask, fgdMask, foregroundMask);
 
-    @PostMapping("/debug-face-detection")
-    public ResponseEntity<?> debugFaceDetection(@RequestBody Map<String, String> payload) {
-        try {
-            String imageData = payload.get("image").split(",")[1];
-            byte[] inputImageBytes = Base64.getDecoder().decode(imageData);
-            Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
-            
-            if (inputImage.empty()) {
-                throw new IllegalArgumentException("Empty image");
-            }
-            
-            // Try different parameters for face detection
-            Map<String, Object> results = new HashMap<>();
-            
-            // Load classifier
-            CascadeClassifier faceDetector = new CascadeClassifier(
-                getClass().getResource("/haarcascade_frontalface_default.xml").getPath().substring(1));
-            
-            // Try different scale factors and min neighbors
-            double[] scaleFactors = {1.05, 1.1, 1.2, 1.3};
-            int[] minNeighbors = {3, 4, 5, 6};
-            
-            List<Map<String, Object>> allDetections = new ArrayList<>();
-            
-            for (double scaleFactor : scaleFactors) {
-                for (int minNeighbor : minNeighbors) {
-                    MatOfRect faceDetections = new MatOfRect();
-                    faceDetector.detectMultiScale(
-                        inputImage, 
-                        faceDetections, 
-                        scaleFactor, 
-                        minNeighbor, 
-                        0, 
-                        new Size(30, 30), 
-                        new Size()
-                    );
-                    
-                    Rect[] faces = faceDetections.toArray();
-                    
-                    Map<String, Object> detectionInfo = new HashMap<>();
-                    detectionInfo.put("scaleFactor", scaleFactor);
-                    detectionInfo.put("minNeighbors", minNeighbor);
-                    detectionInfo.put("facesFound", faces.length);
-                    
-                    List<Map<String, Integer>> facesList = new ArrayList<>();
-                    for (Rect face : faces) {
-                        Map<String, Integer> faceMap = new HashMap<>();
-                        faceMap.put("x", face.x);
-                        faceMap.put("y", face.y);
-                        faceMap.put("width", face.width);
-                        faceMap.put("height", face.height);
-                        facesList.add(faceMap);
-                    }
-                    detectionInfo.put("faces", facesList);
-                    
-                    allDetections.add(detectionInfo);
-                    
-                    // If we found a good face, draw it on a debug image
-                    if (faces.length > 0) {
-                        Mat debugImage = inputImage.clone();
-                        for (Rect face : faces) {
-                            Imgproc.rectangle(debugImage, 
-                                new Point(face.x, face.y), 
-                                new Point(face.x + face.width, face.y + face.height), 
-                                new Scalar(0, 255, 0), 3);
-                        }
-                        
-                        // Convert to base64 and add to results if this is our best detection
-                        if (detectionInfo.equals(allDetections.stream()
-                                .sorted((a, b) -> Integer.compare((int)b.get("facesFound"), (int)a.get("facesFound")))
-                                .findFirst()
-                                .orElse(null))) {
-                            
-                            MatOfByte matOfByte = new MatOfByte();
-                            Imgcodecs.imencode(".jpg", debugImage, matOfByte);
-                            byte[] byteArray = matOfByte.toArray();
-                            String base64Image = Base64.getEncoder().encodeToString(byteArray);
-                            
-                            results.put("bestDetectionImage", "data:image/jpeg;base64," + base64Image);
-                        }
-                    }
-                }
-            }
-            
-            results.put("imageWidth", inputImage.width());
-            results.put("imageHeight", inputImage.height());
-            results.put("detections", allDetections);
-            
-            return ResponseEntity.ok(results);
-            
-        } catch (Exception e) {
-            logger.error("Error debugging face detection", e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "Face detection debugging failed: " + e.getMessage(),
-                "stackTrace", e.getStackTrace()
-            ));
+        int iterations = 2;
+        int size = 5;
+        for (int i = 0; i < iterations; i++) {
+            Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(size + i * 2, size + i * 2));
+            Imgproc.morphologyEx(foregroundMask, foregroundMask, Imgproc.MORPH_CLOSE, kernel);
         }
+
+        return foregroundMask;
     }
 
-    @PostMapping("/improved-detect-face")
-    public ResponseEntity<?> improvedDetectFace(@RequestBody Map<String, String> payload) {
-        try {
-            String imageData = payload.get("image").split(",")[1];
-            byte[] inputImageBytes = Base64.getDecoder().decode(imageData);
-            Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
-            
-            if (inputImage.empty()) {
-                throw new IllegalArgumentException("Empty image");
-            }
-
-            // Try different parameters to improve detection
-            CascadeClassifier faceDetector = new CascadeClassifier(
-                getClass().getResource("/haarcascade_frontalface_default.xml").getPath().substring(1));
-            
-            MatOfRect faceDetections = new MatOfRect();
-            
-            // Use more robust parameters for face detection
-            faceDetector.detectMultiScale(
-                inputImage, 
-                faceDetections, 
-                1.1,   // scale factor
-                5,     // min neighbors
-                0,     // flags
-                new Size(30, 30),  // min size
-                new Size()         // max size
-            );
-            
-            if (faceDetections.empty()) {
-                // Try again with more lenient parameters
-                faceDetector.detectMultiScale(
-                    inputImage, 
-                    faceDetections, 
-                    1.2,   // larger scale factor
-                    3,     // fewer min neighbors
-                    0,     // flags
-                    new Size(20, 20),  // smaller min size
-                    new Size()         // max size
-                );
-            }
-            
-            if (faceDetections.empty()) {
-                // Try one more time with even more lenient parameters
-                faceDetector.detectMultiScale(
-                    inputImage, 
-                    faceDetections, 
-                    1.1,   // scale factor
-                    2,     // min neighbors
-                    0,     // flags
-                    new Size(15, 15),  // smaller min size
-                    new Size()         // max size
-                );
-                
-                if (faceDetections.empty()) {
-                    logger.info("No faces detected after multiple attempts, using center of image");
-                    return ResponseEntity.ok(Map.of(
-                        "cropData", Map.of(
-                            "x", inputImage.width() / 4,
-                            "y", inputImage.height() / 4,
-                            "width", inputImage.width() / 2,
-                            "height", inputImage.height() / 2
-                        ),
-                        "message", "No face detected, using default center crop"
-                    ));
-                }
-            }
-
-            // Find largest face
-            Rect[] faces = faceDetections.toArray();
-            Rect faceRect = faces[0];
-            for (Rect rect : faces) {
-                if (rect.area() > faceRect.area()) {
-                    faceRect = rect;
-                }
-            }
-            
-            // Calculate optimal crop area (centered on face)
-            // Use double for aspect ratio instead of int
-            double aspectRatio;
-            try {
-                String aspectRatioStr = payload.getOrDefault("aspectRatio", "1");
-                aspectRatio = Double.parseDouble(aspectRatioStr);
-            } catch (NumberFormatException e) {
-                logger.warn("Invalid aspect ratio format, defaulting to 1:1");
-                aspectRatio = 1.0;
-            }
-            
-            // Convert to the expected format for the existing calculateOptimalCrop method
-            // We'll pass special values to indicate particular aspect ratios
-            int aspectRatioParam;
-            if (Math.abs(aspectRatio - 1.0) < 0.001) {
-                aspectRatioParam = 1; // square
-            } else if (Math.abs(aspectRatio - 4.0/3.0) < 0.001) {
-                aspectRatioParam = 4; // 4:3
-            } else if (Math.abs(aspectRatio - 3.0/4.0) < 0.001) {
-                aspectRatioParam = 43; // 3:4
-            } else if (Math.abs(aspectRatio - 16.0/9.0) < 0.001) {
-                aspectRatioParam = 16; // 16:9
-            } else if (Math.abs(aspectRatio - 9.0/16.0) < 0.001) {
-                aspectRatioParam = 169; // 9:16
-            } else if (Math.abs(aspectRatio - 35.0/45.0) < 0.001) {
-                aspectRatioParam = 778; // Passport ratio stored as integer (35/45 ≈ 0.778)
-            } else {
-                // For other ratios, just use a large value to indicate custom ratio
-                aspectRatioParam = (int)(aspectRatio * 1000); 
-            }
-            
-            Rect cropRect = calculateOptimalCrop(inputImage.size(), faceRect, aspectRatioParam);
-            
-            logger.info("Face detected at: " + faceRect.toString());
-            logger.info("Optimal crop: " + cropRect.toString());
-
-            return ResponseEntity.ok(Map.of(
-                "cropData", Map.of(
-                    "x", cropRect.x,
-                    "y", cropRect.y,
-                    "width", cropRect.width,
-                    "height", cropRect.height
-                ),
-                "message", "Face detected and crop calculated"
-            ));
-        } catch (Exception e) {
-            logger.error("Error detecting face", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", "Face detection failed: " + e.getMessage()));
-        }
+    private Mat resizeImage(Mat image, int width, int height) {
+        Mat resizedImage = new Mat();
+        Imgproc.resize(image, resizedImage, new Size(width, height), 0, 0, Imgproc.INTER_CUBIC);
+        return resizedImage;
     }
-
 }
