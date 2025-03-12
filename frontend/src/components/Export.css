@@ -107,3 +107,89 @@ button:hover {
     }
 }
 
+/* Mini Gallery Below Preview */
+.export-gallery {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.export-gallery h4 {
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.export-thumbnails {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.export-thumb {
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.export-thumb.active {
+    border-color: #007bff;
+}
+
+.export-thumb img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.export-multiple-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding-bottom: 30px;
+}
+
+.export-card {
+    border-radius: 8px;
+    padding: 20px;
+    margin: 0 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    background-color: white;
+    transition: border-color 0.3s;
+}
+
+.export-buttons-container {
+    display: flex;
+    justify-content: flex-start;
+    gap: 15px;
+    padding: 20px;
+    padding-bottom: 0;
+    margin-top: 10px;
+    margin-left: 20px;
+}
+
+.export-zip-btn {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.export-zip-btn:hover {
+    background-color: #218838;
+}
+
+.export-zip-btn:disabled {
+    background-color: #b1dcb4;
+    cursor: not-allowed;
+}
+
+
+
+
