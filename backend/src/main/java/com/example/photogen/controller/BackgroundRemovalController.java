@@ -123,10 +123,11 @@ public class BackgroundRemovalController {
             
             Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
             clothesImageClone.copyTo(result, clothesForegroundMask);
+
             // Keep the facial region from faceForegroundMask
             Mat facePart = new Mat();
             faceImageClone.copyTo(facePart, faceForegroundMask);
-            Core.add(result, facePart, result);
+            facePart.copyTo(result, faceForegroundMask);
             
             // Remove the existing clothesForegroundMask
             Mat backgroundPart = new Mat();
@@ -136,7 +137,7 @@ public class BackgroundRemovalController {
             if (faceRect.height < 0.6 * drawnImage.height()) {
                 Mat clothesPart = new Mat();
                 resizedFormalImage.copyTo(clothesPart, clothesForegroundMask);
-                Core.add(result, clothesPart, result);
+                clothesPart.copyTo(result, clothesForegroundMask);
             }
         } else {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.7, 1.2);
