@@ -7,6 +7,7 @@ function Sidebar({ onMenuItemClick, activeItem, handleUndo, handleRedo, undoDisa
     { name: 'Crop & Resize', icon: '✂️' },
     { name: 'Background Remover', icon: '🎭' },
     { name: 'T-Shirt Editor', icon: '👕' },
+    { name: 'Photo Enhancement', icon: '✏️' },
     { name: 'Download photos in .jpeg, .png, etc.', icon: '💾' }
   ];
 

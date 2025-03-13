@@ -6,6 +6,7 @@ import BackgroundRemover from './components/BackgroundRemover';
 import './App.css';
 import TShirtEditor from './components/TShirtEditor';
 import Export from './components/Export';
+import PhotoEnhancement from './components/PhotoEnhancement';
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('Welcome');
@@ -86,6 +87,13 @@ function App() {
         />;
       case 'T-Shirt Editor':
         return <TShirtEditor 
+          images={images} 
+          setImages={updateImages} 
+          currentImageIndex={currentImageIndex}
+          setCurrentImageIndex={setCurrentImageIndex}
+        />;
+      case 'Photo Enhancement':
+        return <PhotoEnhancement 
           images={images} 
           setImages={updateImages} 
           currentImageIndex={currentImageIndex}
