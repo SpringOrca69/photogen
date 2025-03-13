@@ -106,6 +106,11 @@ public class BackgroundRemovalController {
 
         Mat faceImage = drawnImage.clone();
         Mat faceImageClone = faceImage.clone();
+        Mat formalImage = Imgcodecs.imread("src/main/resources/images/formal2.png");
+        if (formalImage.empty()) {
+            throw new IllegalArgumentException("Formal image not found");
+        }
+        Mat resizedFormalImage = resizeImage(formalImage, result.width(), result.height());
         
         if (faceRect.height < 0.6 * drawnImage.height()) {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
@@ -118,6 +123,21 @@ public class BackgroundRemovalController {
             
             Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
             clothesImageClone.copyTo(result, clothesForegroundMask);
+            // Keep the facial region from faceForegroundMask
+            Mat facePart = new Mat();
+            faceImageClone.copyTo(facePart, faceForegroundMask);
+            Core.add(result, facePart, result);
+            
+            // Remove the existing clothesForegroundMask
+            Mat backgroundPart = new Mat();
+            result.copyTo(backgroundPart, clothesForegroundMask);
+            Core.subtract(result, backgroundPart, result);
+
+            if (faceRect.height < 0.6 * drawnImage.height()) {
+                Mat clothesPart = new Mat();
+                resizedFormalImage.copyTo(clothesPart, clothesForegroundMask);
+                Core.add(result, clothesPart, result);
+            }
         } else {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.7, 1.2);
             Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);

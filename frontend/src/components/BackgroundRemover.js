@@ -3,9 +3,9 @@ import { ColorPicker } from '@wellbees/color-picker-input';
 import './BackgroundRemover.css';
 import formal1 from './images/formal1.png';
 import formal2 from './images/formal2.png';
-import formal4 from './images/formal4.png';
+import formal3 from './images/formal3.png';
 
-const clothingImages = [formal1, formal2, formal4]; // Array of clothing images
+const clothingImages = [formal1, formal2, formal3]; // Array of clothing images
 
 function BackgroundRemover({ onNext, onBack }) {
   const [images, setImages] = useState(() => {
@@ -159,6 +159,8 @@ function BackgroundRemover({ onNext, onBack }) {
         </div>
         <div className="custom-background">
           <label>Or Upload Custom Background:</label>
+        </div>
+        <div>
           <input
             type="file"
             onChange={handleCustomBackgroundUpload}
