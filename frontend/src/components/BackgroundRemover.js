@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ColorPicker } from '@wellbees/color-picker-input';
 import './BackgroundRemover.css';
+import formal1 from './images/formal1.png';
+import formal2 from './images/formal2.png';
+import formal4 from './images/formal4.png';
+
+const clothingImages = [formal1, formal2, formal4]; // Array of clothing images
 
 function BackgroundRemover({ onNext, onBack }) {
   const [images, setImages] = useState(() => {
@@ -14,6 +19,7 @@ function BackgroundRemover({ onNext, onBack }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedImage, setProcessedImage] = useState(null);
   const [isImageSaved, setIsImageSaved] = useState(false);
+  const [selectedClothingIndex, setSelectedClothingIndex] = useState(null);
 
   useEffect(() => {
     setIsImageSaved(false);
@@ -95,7 +101,7 @@ function BackgroundRemover({ onNext, onBack }) {
         body: JSON.stringify({
           image: imageDataUrl,
           backgroundColour: backgroundColour,
-          customBackground: customBackground
+          customBackground: customBackground,
         }),
       });
   
@@ -116,13 +122,17 @@ function BackgroundRemover({ onNext, onBack }) {
   const resetProcessedImage = () => {
     setProcessedImage(null);
   };
-  
+
+  const handleClothingOptionClick = (index) => {
+    setSelectedClothingIndex(index);
+    console.log(`Selected clothing option: ${clothingImages[index]}`);
+  };
 
   return (
-      <div className="background-remover-container">
+    <div className="background-remover-container">
       <h2>Background Remover</h2>
       <div className="image-preview">
-            {images.length > 0 && (
+        {images.length > 0 && (
           <img src={images[currentImageIndex].url} alt="Current" />
         )}
       </div>
@@ -153,27 +163,38 @@ function BackgroundRemover({ onNext, onBack }) {
             type="file"
             onChange={handleCustomBackgroundUpload}
             accept="image/*"
-                    />
-                  </div>
-                </div>
+          />
+        </div>
+        <h3>Select Clothing Options</h3>
+        <div className="clothing-options">
+          {clothingImages.map((image, index) => (
+            <div
+              key={index}
+              className={`clothing-card ${selectedClothingIndex === index ? 'selected' : ''}`}
+              onClick={() => handleClothingOptionClick(index)}
+            >
+              <img src={image} alt={`Clothing Option ${index}`} />
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="controls">
-                    <button 
+        <button 
           onClick={handleBackgroundRemoval}
           disabled={isProcessing || images.length === 0}
-                    >
-          {isProcessing ? 'Processing...' : 'Remove Background'}
-                    </button>
-                  </div>
-      {console.log("processedImage value:", processedImage)}
+        >
+          {isProcessing ? 'Processing...' : 'Process Image'}
+        </button>
+      </div>
       {processedImage && (
         <div className="processed-image-container">
           <h3>Processed Image</h3>
           <img src={processedImage} alt="Processed" />
           <button onClick={resetProcessedImage} className="control-button secondary">
-              Reset Image
+            Reset Image
           </button>
           <button onClick={saveProcessedImage} className="control-button primary" disabled={isImageSaved}>
-      {isImageSaved ? 'Saved!' : 'Save Image'}
+            {isImageSaved ? 'Saved!' : 'Save Image'}
           </button>
         </div>
       )}
