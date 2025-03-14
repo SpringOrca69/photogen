@@ -1,4 +1,4 @@
-com\example\photogen\config\WebConfig.class
 com\example\photogen\controller\BackgroundRemovalController.class
 com\example\photogen\controller\AutoCropController.class
+com\example\photogen\config\WebConfig.class
 com\example\photogen\PhotogenApplication.class

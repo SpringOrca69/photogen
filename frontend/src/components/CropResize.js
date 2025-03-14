@@ -21,7 +21,8 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
 
   const handleStartCrop = () => {
     setIsCropMode(true);
-    setAspectRatio(35/45); // Change default to passport size
+    // Always set default to passport size
+    setAspectRatio(35/45);
   };
 
   const handleAutoDetect = async () => {
@@ -30,11 +31,10 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     setIsAutoDetecting(true);
     
     try {
-      // Convert image URL to proper data URL if needed
+      // Get the current image data
       let imageData = images[currentImageIndex].url;
       
-      // If the URL is not already a data URL (doesn't start with 'data:'), 
-      // fetch it and convert it to a data URL
+      // Ensure the URL is a data URL
       if (!imageData.startsWith('data:')) {
         try {
           const response = await fetch(imageData);
@@ -50,6 +50,14 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
         }
       }
       
+      // Make sure we have valid image data before proceeding
+      if (!imageData || imageData.length < 100) {
+        throw new Error("Invalid image data");
+      }
+      
+      // Use passport photo aspect ratio
+      const passportAspectRatio = 35/45;
+      
       const response = await fetch('/api/auto-crop/improved-detect-face', {
         method: 'POST',
         headers: {
@@ -57,7 +65,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
         },
         body: JSON.stringify({
           image: imageData,
-          aspectRatio: 35/45 // Change to passport photo ratio
+          aspectRatio: passportAspectRatio
         }),
       });
       
@@ -65,26 +73,34 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       
       if (response.ok) {
         setIsCropMode(true);
-        setAspectRatio(35/45); // Set to passport ratio instead of square
+        setAspectRatio(passportAspectRatio);
         
         // Wait for the cropper to be ready
         setTimeout(() => {
           const cropper = cropperRef.current?.cropper;
           if (cropper) {
             const { x, y, width, height } = data.cropData;
+            
+            // Set the cropbox using the data from backend
             cropper.setCropBoxData({
               left: x,
               top: y,
-              width,
-              height
+              width: width,
+              height: height
             });
+            
+            // Ensure the right aspect ratio is maintained
+            cropper.setAspectRatio(passportAspectRatio);
           }
-        }, 200);
+        }, 300); // Increase timeout to ensure cropper is fully initialized
       } else {
         console.error("Face detection failed:", data.error);
+        // Show a user-friendly error message
+        alert("Face detection failed. Please try manual cropping or a different image.");
       }
     } catch (error) {
       console.error("Error contacting auto-crop API:", error);
+      alert("Unable to detect face. Please try manual cropping.");
     } finally {
       setIsAutoDetecting(false);
     }
@@ -162,10 +178,14 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
                   autoCropArea={0.8}
                   background={true}
                   responsive={true}
-                  zoomable={false}
+                  zoomable={true}
+                  zoomOnTouch={false}
+                  zoomOnWheel={false}
                   ready={() => {
                     const cropper = cropperRef.current?.cropper;
-                    cropper?.setAspectRatio(aspectRatio);
+                    if (cropper) {
+                      cropper.setAspectRatio(aspectRatio || 35/45); // Default to passport size
+                    }
                   }}
                 />
               ) : (
