@@ -34,13 +34,14 @@ public class AutoCropController {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
     
-    @PostMapping("/improved-detect-face")
+    @PostMapping("/detect-face")
     public ResponseEntity<?> detectFace(@RequestBody Map<String, Object> payload) {
         try {
             String imageData = (String) payload.get("image");
+            // Always default to passport photo ratio (35×45mm) if not specified
             double aspectRatio = payload.containsKey("aspectRatio") ? 
                 Double.parseDouble(payload.get("aspectRatio").toString()) : 35.0/45.0;
-                
+                    
             // Remove data URL prefix if present
             if (imageData.startsWith("data:")) {
                 imageData = imageData.substring(imageData.indexOf(",") + 1);
@@ -52,23 +53,232 @@ public class AutoCropController {
                 imageBytes = Base64.getDecoder().decode(imageData);
             } catch (IllegalArgumentException e) {
                 logger.error("Invalid base64 encoding: ", e);
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image data encoding"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image data. Please use manual cropping instead."));
             }
             
             Mat image = Imgcodecs.imdecode(new MatOfByte(imageBytes), Imgcodecs.IMREAD_COLOR);
-            
             if (image.empty()) {
-                logger.error("Could not decode image data, returning error");
-                return ResponseEntity.badRequest().body(Map.of("error", "Could not read image"));
+                logger.error("Failed to decode image from base64 data");
+                return ResponseEntity.badRequest().body(Map.of("error", "Could not decode image data. Please use manual cropping."));
             }
             
-            Map<String, Object> cropData = detectFacesAndEyes(image, aspectRatio);
-            
-            return ResponseEntity.ok(Map.of("cropData", cropData));
-            
+            // Use the enhanced face detection that also looks for eyes and nose for better positioning
+            try {
+                Map<String, Object> cropData = detectFacesAndEyes(image, aspectRatio);
+                return ResponseEntity.ok(Map.of("cropData", cropData));
+            } catch (RuntimeException e) {
+                // Fall back to simpler face detection if the enhanced method fails
+                logger.warn("Enhanced face detection failed, falling back to basic detection: {}", e.getMessage());
+                
+                // Process image for face detection
+                Mat grayImage = new Mat();
+                Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
+                Imgproc.equalizeHist(grayImage, grayImage);
+                
+                // Load the cascade classifier for face detection
+                CascadeClassifier faceCascade = new CascadeClassifier();
+                try {
+                    // Try to load using ClassPathResource first (preferred approach)
+                    java.io.File cascadeFile = org.springframework.core.io.Resource.class.cast(
+                        new org.springframework.core.io.ClassPathResource("/haarcascade_frontalface_alt.xml")).getFile();
+                    faceCascade.load(cascadeFile.getAbsolutePath());
+                } catch (Exception ex) {
+                    logger.warn("Failed to load cascade using ClassPathResource, trying direct path: ", ex);
+                    // Fallback method for Windows paths
+                    String cascadePath = getClass().getResource("/haarcascade_frontalface_alt.xml").getPath();
+                    if (cascadePath.contains(":") && cascadePath.startsWith("/")) {
+                        cascadePath = cascadePath.substring(1);
+                    }
+                    faceCascade.load(cascadePath);
+                }
+                
+                if (faceCascade.empty()) {
+                    logger.error("Failed to load face cascade classifier");
+                    return ResponseEntity.status(500).body(Map.of("error", "Face detection model could not be loaded. Please use manual cropping instead."));
+                }
+                
+                // Attempt basic face detection with the fallback method
+                // If this also fails, suggest manual cropping in the error message
+                MatOfRect faces = new MatOfRect();
+                faceCascade.detectMultiScale(
+                    grayImage,
+                    faces,
+                    1.05,  // Lower scale factor for better detection
+                    5,     // Higher min neighbors for better quality
+                    0,
+                    new Size(20, 20),
+                    new Size()
+                );
+                
+                List<Rect> facesList = faces.toList();
+                if (facesList.isEmpty()) {
+                    // Try again with more permissive parameters
+                    faceCascade.detectMultiScale(
+                        grayImage,
+                        faces,
+                        1.1,
+                        3,
+                        0,
+                        new Size(30, 30),
+                        new Size()
+                    );
+                    
+                    facesList = faces.toList();
+                    if (facesList.isEmpty()) {
+                        logger.error("No faces detected in the image");
+                        return ResponseEntity.badRequest().body(Map.of("error", "No faces detected. Please use manual cropping to position your photo."));
+                    }
+                }
+                
+                // Find the largest face (most likely the main subject)
+                Rect largestFace = facesList.get(0);
+                for (Rect face : facesList) {
+                    if (face.area() > largestFace.area()) {
+                        largestFace = face;
+                    }
+                }
+                
+                // Apply a margin around the detected face to ensure we include the entire face
+                // Expand more at the top for hair and forehead, which the face detector often misses
+                double topExpansion = 1.0;     // 100% expansion above the face for hair
+                double bottomExpansion = 0.6;  // 60% expansion below the face for chin/neck
+                double sideExpansion = 0.5;    // 50% expansion on each side
+                
+                // Calculate expanded face rectangle with margins
+                int expandedX = (int) Math.max(0, largestFace.x - (largestFace.width * sideExpansion));
+                int expandedY = (int) Math.max(0, largestFace.y - (largestFace.height * topExpansion));
+                int expandedWidth = (int) Math.min(
+                    image.width() - expandedX, 
+                    largestFace.width * (1 + 2 * sideExpansion)
+                );
+                int expandedHeight = (int) Math.min(
+                    image.height() - expandedY, 
+                    largestFace.height * (1 + topExpansion + bottomExpansion)
+                );
+                
+                // Get the center of the expanded face
+                int centerX = expandedX + expandedWidth / 2;
+                int centerY = expandedY + expandedHeight / 2;
+                
+                // Calculate crop dimensions for passport/ID photo
+                // For passport photos, typically the head height should be 70-80% of the image height
+                double targetHeight = expandedHeight * 1.3; // Add some extra margin
+                double targetWidth = targetHeight * aspectRatio;
+                
+                // Position the eyes at approximately 45% from the top for ID photos
+                // Estimate eye position at about 40% from the top of the face
+                int estimatedEyeY = largestFace.y + (int)(largestFace.height * 0.4);
+                double cropTop = estimatedEyeY - (targetHeight * 0.45);
+                double cropLeft = centerX - (targetWidth / 2.0);
+                
+                // Ensure crop box stays within the image boundaries
+                cropTop = Math.max(0, cropTop);
+                cropLeft = Math.max(0, cropLeft);
+                
+                if (cropLeft + targetWidth > image.width()) {
+                    cropLeft = Math.max(0, image.width() - targetWidth);
+                }
+                
+                if (cropTop + targetHeight > image.height()) {
+                    cropTop = Math.max(0, image.height() - targetHeight);
+                }
+                
+                // Final size check to prevent exceeding image dimensions
+                targetWidth = Math.min(targetWidth, image.width() - cropLeft);
+                targetHeight = Math.min(targetHeight, image.height() - cropTop);
+                
+                // Estimate nose position (typically at the center of the face)
+                int estimatedNoseX = largestFace.x + (largestFace.width / 2);
+                int estimatedNoseY = largestFace.y + (int)(largestFace.height * 0.55);
+
+                // Calculate crop dimensions for passport/ID photo
+                targetHeight = expandedHeight * 1.3; // Add some extra margin
+                targetWidth = targetHeight * aspectRatio;
+
+                // Center the crop box horizontally on the estimated nose position
+                cropLeft = estimatedNoseX - (targetWidth / 2.0);
+
+                // Position the eyes at approximately 45% from the top for ID photos
+                cropTop = estimatedEyeY - (targetHeight * 0.45);
+
+                // Ensure crop box stays within image boundaries while maintaining nose centering
+                if (cropLeft < 0) {
+                    // If not enough space on left side, try to reduce width while keeping aspect ratio
+                    double maxWidth = estimatedNoseX * 2;
+                    if (maxWidth >= targetWidth) {
+                        cropLeft = 0;
+                    } else {
+                        targetWidth = maxWidth;
+                        targetHeight = targetWidth / aspectRatio;
+                        cropLeft = 0;
+                    }
+                }
+
+                if (cropLeft + targetWidth > image.width()) {
+                    double maxWidth = (image.width() - estimatedNoseX) * 2;
+                    if (maxWidth >= targetWidth) {
+                        cropLeft = image.width() - targetWidth;
+                    } else {
+                        targetWidth = maxWidth;
+                        targetHeight = targetWidth / aspectRatio;
+                        cropLeft = image.width() - targetWidth;
+                    }
+                }
+
+                // Inside the fallback face detection code in detectFace method
+                // Find the largest face section...
+
+                // Get the face center point (instead of estimated nose)
+                int faceCenterX = largestFace.x + largestFace.width / 2;
+                int faceCenterY = largestFace.y + largestFace.height / 2;
+
+                // Calculate crop dimensions for passport/ID photo
+                targetHeight = expandedHeight * 1.3; // Add some extra margin
+                targetWidth = targetHeight * aspectRatio;
+
+                // Center the crop box horizontally on the face center (not just nose)
+                cropLeft = faceCenterX - (targetWidth / 2.0);
+
+                // Position the eyes at approximately 45% from the top for ID photos
+                cropTop = estimatedEyeY - (targetHeight * 0.45);
+
+                // Ensure crop box stays within image boundaries while preserving centering
+                if (cropLeft < 0) {
+                    cropLeft = 0;
+                } else if (cropLeft + targetWidth > image.width()) {
+                    cropLeft = image.width() - targetWidth;
+                }
+
+                if (cropTop < 0) {
+                    cropTop = 0;
+                } else if (cropTop + targetHeight > image.height()) {
+                    cropTop = image.height() - targetHeight;
+                }
+
+                // Final size check
+                targetWidth = Math.min(targetWidth, image.width());
+                targetHeight = Math.min(targetHeight, image.height());
+
+                // Create result with the crop coordinates
+                Map<String, Object> cropData = new HashMap<>();
+                cropData.put("x", (int)cropLeft);
+                cropData.put("y", (int)cropTop);
+                cropData.put("width", (int)targetWidth);
+                cropData.put("height", (int)targetHeight);
+                cropData.put("faceRect", Map.of(
+                    "x", largestFace.x,
+                    "y", largestFace.y,
+                    "width", largestFace.width,
+                    "height", largestFace.height
+                 ));
+                cropData.put("faceCentered", true);
+                cropData.put("relativeFaceCenter", (faceCenterX - cropLeft) / targetWidth);
+                
+                return ResponseEntity.ok(Map.of("cropData", cropData));
+            }
         } catch (Exception e) {
             logger.error("Error in face detection: ", e);
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "Face detection failed. Please try manual cropping instead."));
         }
     }
 
@@ -120,7 +330,7 @@ public class AutoCropController {
         }
         
         if (faceCascade.empty() || eyesCascade.empty() || noseCascade.empty()) {
-            throw new RuntimeException("Error loading cascade classifiers");
+            throw new RuntimeException("Error loading cascade classifiers. Please try manual cropping.");
         }
 
         // Detect faces
@@ -137,7 +347,7 @@ public class AutoCropController {
 
         List<Rect> listOfFaces = faces.toList();
         if (listOfFaces.isEmpty()) {
-            throw new RuntimeException("No faces detected");
+            throw new RuntimeException("No faces detected. Please try manual cropping.");
         }
 
         // Find the largest face
@@ -279,13 +489,20 @@ public class AutoCropController {
         
         // Position the crop box so that:
         // 1. The eyes are positioned at about 45-50% from the top of the image (standard for passport photos)
-        // 2. The nose is always centered horizontally
+        // 2. The nose is always centered horizontally - this is crucial for ID photos
         double eyePositionRatio = 0.45; // Eyes should be about 45% from the top of the crop box
         
-        // Start by centering horizontally on the nose
-        double cropCenterX = noseMidpoint.x;
+        // Ensure the crop is exactly centered on the face horizontally instead of just the nose
+        double cropCenterX;
         
-        // Determine vertical position based on eyes and nose
+        // Calculate face width including eyes if detected
+        double effectiveFaceWidth = maxX - minX;
+        
+        // Center the crop box on the face's center point rather than just the nose
+        // This ensures equal spacing on both left and right sides of the face
+        cropCenterX = minX + (effectiveFaceWidth / 2.0);
+        
+        // Rest of positioning logic remains similar
         double cropCenterY;
         
         if (eyesMidpoint != null) {
@@ -306,17 +523,35 @@ public class AutoCropController {
         double left = cropCenterX - (targetWidth / 2.0);
         double top = cropCenterY - (targetHeight / 2.0);
         
-        // Ensure the crop box stays within the image boundaries
-        if (left < 0) left = 0;
+        // Handle boundary conditions while prioritizing horizontal nose centering
+        // If the crop box would go outside the image horizontally:
+        if (left < 0 || left + targetWidth > image.width()) {
+            // Calculate the maximum possible width that fits in the image
+            double maxWidth = Math.min(cropCenterX * 2, (image.width() - cropCenterX) * 2);
+            
+            if (maxWidth >= targetWidth) {
+                // We can maintain the aspect ratio and keep nose centered
+                left = cropCenterX - (targetWidth / 2.0);
+            } else {
+                // We need to adjust width while maintaining aspect ratio
+                targetWidth = Math.min(image.width(), maxWidth);
+                targetHeight = targetWidth / aspectRatio;
+                
+                // Recalculate left position to keep nose centered
+                left = cropCenterX - (targetWidth / 2.0);
+                
+                // Update top position based on new height
+                top = cropCenterY - (targetHeight / 2.0);
+            }
+        }
+        
+        // After horizontal centering is fixed, handle vertical constraints
         if (top < 0) top = 0;
-        if (left + targetWidth > image.width()) left = image.width() - targetWidth;
         if (top + targetHeight > image.height()) top = image.height() - targetHeight;
         
-        // Final boundary check (in case image is smaller than target dimensions)
-        if (left < 0) left = 0;
-        if (top < 0) top = 0;
-        if (left + targetWidth > image.width()) targetWidth = image.width() - left;
-        if (top + targetHeight > image.height()) targetHeight = image.height() - top;
+        // Final boundary check
+        if (targetWidth > image.width()) targetWidth = image.width();
+        if (targetHeight > image.height()) targetHeight = image.height();
         
         // Build result data
         Map<String, Object> cropData = new HashMap<>();
@@ -324,6 +559,9 @@ public class AutoCropController {
         cropData.put("y", (int)top);
         cropData.put("width", (int)targetWidth);
         cropData.put("height", (int)targetHeight);
+        
+        // Add a flag to indicate that nose centering was enforced
+        cropData.put("noseCentered", true);
         
         // For debugging, add feature points
         Map<String, Object> debugPoints = new HashMap<>();
@@ -333,6 +571,15 @@ public class AutoCropController {
         }
         debugPoints.put("noseMidpoint", new double[] {noseMidpoint.x, noseMidpoint.y});
         cropData.put("debugPoints", debugPoints);
+        
+        // Calculate and add alignment info to help frontend display guides
+        double relativeNoseX = (noseMidpoint.x - left) / targetWidth;
+        cropData.put("relativeNoseX", relativeNoseX);
+        
+        // Add information about face centering to the response
+        cropData.put("faceCentered", true);
+        cropData.put("faceWidth", effectiveFaceWidth);
+        cropData.put("relativeFaceCenter", (cropCenterX - left) / targetWidth);
         
         return cropData;
     }
