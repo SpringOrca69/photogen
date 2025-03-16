@@ -278,33 +278,36 @@ public class AutoCropController {
         double targetWidth = targetHeight * aspectRatio;
         
         // Position the crop box so that:
-        // 1. The eyes are positioned at about 45-50% from the top of the image (standard for passport photos)
-        // 2. The nose is always centered horizontally
-        double eyePositionRatio = 0.45; // Eyes should be about 45% from the top of the crop box
+        // 1. The eyes are positioned at about 35-40% from the top of the image (lower value = higher position)
+        // 2. The face is centered horizontally
+        double eyePositionRatio = 0.25; // Further decreased from 0.35 to position eyes even higher in the frame
         
-        // Start by centering horizontally on the nose
-        double cropCenterX = noseMidpoint.x;
+        // Center the cropbox on the face horizontally - use the face center for accurate horizontal positioning 
+        double cropCenterX = faceCenter.x;
         
         // Determine vertical position based on eyes and nose
         double cropCenterY;
         
         if (eyesMidpoint != null) {
-            // Position so eyes are at the correct height
+            // Position so eyes are at the correct height (higher in the frame)
             cropCenterY = eyesMidpoint.y + (targetHeight * (0.5 - eyePositionRatio));
             
             // Ensure we include the nose by adjusting the crop box if needed
             if (cropCenterY + (targetHeight / 2.0) < noseMidpoint.y + (targetHeight * 0.1)) {
                 // If nose would be too close to bottom, shift down to include it properly
-                cropCenterY = noseMidpoint.y - (targetHeight * 0.35);
+                cropCenterY = noseMidpoint.y - (targetHeight * 0.4); // Adjusted for higher position
             }
         } else {
-            // If no eyes detected, position based on nose and face
-            cropCenterY = noseMidpoint.y - (targetHeight * 0.3); // Position nose lower in the frame
+            // If no eyes detected, position based on nose and face (higher in the frame)
+            cropCenterY = noseMidpoint.y - (targetHeight * 0.45); // Adjusted to position cropbox higher
         }
         
         // Calculate top-left corner from center point
         double left = cropCenterX - (targetWidth / 2.0);
         double top = cropCenterY - (targetHeight / 2.0);
+        
+        // Force the y position to be closer to the top
+        top = Math.max(0, top - (targetHeight * 0.1)); // Shift the entire cropbox up by 10% of its height
         
         // Ensure the crop box stays within the image boundaries
         if (left < 0) left = 0;
@@ -315,15 +318,34 @@ public class AutoCropController {
         // Final boundary check (in case image is smaller than target dimensions)
         if (left < 0) left = 0;
         if (top < 0) top = 0;
-        if (left + targetWidth > image.width()) targetWidth = image.width() - left;
-        if (top + targetHeight > image.height()) targetHeight = image.height() - top;
+        
+        // Ensure we maintain the exact 35:45 aspect ratio
+        // If we had to adjust the crop box position, we need to recalculate dimensions
+        double cropWidth = Math.min(targetWidth, image.width() - left);
+        double cropHeight = Math.min(targetHeight, image.height() - top);
+        
+        // Always maintain exact 35:45 ratio
+        if (cropWidth / cropHeight != aspectRatio) {
+            // Decide whether to adjust width or height based on available space
+            if (cropWidth / aspectRatio <= image.height() - top) {
+                // Adjust height based on width
+                cropHeight = cropWidth / aspectRatio;
+            } else {
+                // Adjust width based on height
+                cropWidth = cropHeight * aspectRatio;
+            }
+        }
+        
+        // One final check to ensure we're within bounds
+        if (left + cropWidth > image.width()) cropWidth = image.width() - left;
+        if (top + cropHeight > image.height()) cropHeight = image.height() - top;
         
         // Build result data
         Map<String, Object> cropData = new HashMap<>();
-        cropData.put("x", (int)left);
-        cropData.put("y", (int)top);
-        cropData.put("width", (int)targetWidth);
-        cropData.put("height", (int)targetHeight);
+        cropData.put("left", (int)left);
+        cropData.put("top", (int)top);
+        cropData.put("width", (int)cropWidth);
+        cropData.put("height", (int)cropHeight);
         
         // For debugging, add feature points
         Map<String, Object> debugPoints = new HashMap<>();

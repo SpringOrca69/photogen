@@ -72,30 +72,76 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       const data = await response.json();
       
       if (response.ok) {
+        // First set crop mode and aspect ratio
         setIsCropMode(true);
         setAspectRatio(passportAspectRatio);
         
-        // Wait for the cropper to be ready
+        // Create an image to get dimensions
+        const img = new Image();
+        img.src = images[currentImageIndex].url;
+        
+        // Use a longer timeout to ensure cropper is fully initialized
         setTimeout(() => {
           const cropper = cropperRef.current?.cropper;
           if (cropper) {
+            // Get the original data from the API
             const { x, y, width, height } = data.cropData;
             
-            // Set the cropbox using the data from backend
-            cropper.setCropBoxData({
-              left: x,
-              top: y,
-              width: width,
-              height: height
-            });
+            // Reset the cropper to prepare for new cropbox
+            cropper.clear();
+            cropper.reset();
             
-            // Ensure the right aspect ratio is maintained
+            // Apply aspect ratio first
             cropper.setAspectRatio(passportAspectRatio);
+            
+            // Enable cropping mode
+            cropper.crop();
+            
+            // Wait for the cropper to be ready after reset
+            setTimeout(() => {
+              // Get canvas and container dimensions to properly set position
+              const canvasData = cropper.getCanvasData();
+              const containerData = cropper.getContainerData();
+            
+              // Create the cropbox with the data from backend
+              // The crop box position needs to be relative to the canvas
+              const cropBoxData = {
+                left: x + canvasData.left,
+                top: y + canvasData.top,
+                width: width,
+                height: height
+              };
+              
+              console.log("Setting cropbox with data:", cropBoxData);
+              cropper.setCropBoxData(cropBoxData);
+              
+              // Make sure the cropbox is visible and centered in the viewport
+              cropper.crop();
+              
+              // Add additional check to verify the crop box is fully visible
+              const currentCropBox = cropper.getCropBoxData();
+              console.log("Current cropbox after setting:", currentCropBox);
+              
+              // If the cropbox is partially outside the visible area, adjust it
+              if (currentCropBox.top < 0 || 
+                  currentCropBox.left < 0 ||
+                  currentCropBox.top + currentCropBox.height > containerData.height ||
+                  currentCropBox.left + currentCropBox.width > containerData.width) {
+                
+                // Center the cropbox in the visible area
+                cropper.zoomTo(0.9); // Slightly zoom out to ensure visibility
+                
+                // Move view to center on the cropbox
+                cropper.moveTo(
+                  Math.max(0, (containerData.width - currentCropBox.width) / 2),
+                  Math.max(0, (containerData.height - currentCropBox.height) / 2)
+                );
+              }
+            }, 200);
           }
-        }, 300); // Increase timeout to ensure cropper is fully initialized
+        }, 500);
       } else {
         console.error("Face detection failed:", data.error);
-        // Show a user-friendly error message
         alert("Face detection failed. Please try manual cropping or a different image.");
       }
     } catch (error) {
