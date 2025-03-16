@@ -9,8 +9,6 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const [aspectRatio, setAspectRatio] = useState(null);
   const cropperRef = useRef(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
-  const [autoDetectError, setAutoDetectError] = useState(null);
-  const [isAutoDetected, setIsAutoDetected] = useState(false);
 
   const aspectRatioOptions = [
     { label: '35×45mm Passport', value: 35/45 },
@@ -25,14 +23,12 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     setIsCropMode(true);
     // Always set default to passport size
     setAspectRatio(35/45);
-    setAutoDetectError(null);
   };
 
   const handleAutoDetect = async () => {
     if (!images[currentImageIndex]) return;
     
     setIsAutoDetecting(true);
-    setAutoDetectError(null);
     
     try {
       // Get the current image data
@@ -59,10 +55,10 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
         throw new Error("Invalid image data");
       }
       
-      // Always use passport photo aspect ratio
+      // Use passport photo aspect ratio
       const passportAspectRatio = 35/45;
       
-      const response = await fetch('/api/auto-crop/detect-face', {
+      const response = await fetch('/api/auto-crop/improved-detect-face', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,20 +73,13 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       
       if (response.ok) {
         setIsCropMode(true);
-        setAspectRatio(passportAspectRatio); // Lock to passport ratio
-        setIsAutoDetected(true);
+        setAspectRatio(passportAspectRatio);
         
         // Wait for the cropper to be ready
         setTimeout(() => {
           const cropper = cropperRef.current?.cropper;
           if (cropper) {
             const { x, y, width, height } = data.cropData;
-            
-            // Reset the cropper before applying new dimensions
-            cropper.reset();
-            
-            // Lock the aspect ratio to passport size
-            cropper.setAspectRatio(passportAspectRatio);
             
             // Set the cropbox using the data from backend
             cropper.setCropBoxData({
@@ -100,17 +89,18 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
               height: height
             });
             
-            // Disable resizing for auto-detected faces to maintain correct proportions
-            cropper.setDragMode('move');
+            // Ensure the right aspect ratio is maintained
+            cropper.setAspectRatio(passportAspectRatio);
           }
-        }, 500);
+        }, 300); // Increase timeout to ensure cropper is fully initialized
       } else {
         console.error("Face detection failed:", data.error);
-        setAutoDetectError(data.error || "Face detection failed");
+        // Show a user-friendly error message
+        alert("Face detection failed. Please try manual cropping or a different image.");
       }
     } catch (error) {
       console.error("Error contacting auto-crop API:", error);
-      setAutoDetectError("Unable to detect face. Please try manual cropping.");
+      alert("Unable to detect face. Please try manual cropping.");
     } finally {
       setIsAutoDetecting(false);
     }
@@ -131,31 +121,13 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const handleCancelCrop = () => {
     setIsCropMode(false);
     setAspectRatio(null);
-    setAutoDetectError(null);
   };
 
   const handleSaveCrop = () => {
     const cropper = cropperRef.current?.cropper;
     if (cropper) {
-      // Get crop box data to verify valid selection
-      const cropData = cropper.getCropBoxData();
-      
-      if (cropData.width < 10 || cropData.height < 10) {
-        alert("Please select a larger area to crop");
-        return;
-      }
-      
-      const croppedCanvas = cropper.getCroppedCanvas({
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-      });
-      
-      if (!croppedCanvas) {
-        alert("Error creating cropped image. Please try again.");
-        return;
-      }
-      
-      const croppedImage = croppedCanvas.toDataURL('image/jpeg', 0.95);
+      const croppedCanvas = cropper.getCroppedCanvas();
+      const croppedImage = croppedCanvas.toDataURL();
       
       const newImage = {
         url: croppedImage,
@@ -171,14 +143,12 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
 
       setIsCropMode(false);
       setAspectRatio(null);
-      setAutoDetectError(null);
     }
   };
 
   const handleThumbnailClick = (index) => {
     if (!isCropMode) {
       setCurrentImageIndex(index);
-      setAutoDetectError(null);
     }
   };
 
@@ -192,11 +162,6 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       <div className="crop-resize-container">
         <section className="editor-section">
           <h2 className="section-title">Image Editor</h2>
-          {autoDetectError && (
-            <div className="error-message">
-              {autoDetectError}. Please try manual cropping.
-            </div>
-          )}
           <div className="cropper-container">
             {images.length > 0 && (
               isCropMode ? (
@@ -209,14 +174,13 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
                   viewMode={2}
                   dragMode="crop"
                   cropBoxMovable={true}
-                  cropBoxResizable={!isAutoDetected} // Disable resizing when auto-detected
+                  cropBoxResizable={true}
                   autoCropArea={0.8}
                   background={true}
                   responsive={true}
                   zoomable={true}
-                  zoomOnTouch={true}
-                  zoomOnWheel={true}
-                  wheelZoomRatio={0.1}
+                  zoomOnTouch={false}
+                  zoomOnWheel={false}
                   ready={() => {
                     const cropper = cropperRef.current?.cropper;
                     if (cropper) {
@@ -247,7 +211,7 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
                   className="control-button primary auto-detect"
                   disabled={isAutoDetecting}
                 >
-                  {isAutoDetecting ? 'Detecting Face...' : 'Auto-Detect Face'}
+                  {isAutoDetecting ? 'Detecting...' : 'Auto-Detect Face'}
                 </button>
               </div>
             ) : (
