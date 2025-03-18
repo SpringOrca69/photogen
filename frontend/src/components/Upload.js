@@ -3,17 +3,17 @@ import './Upload.css';
 
 function Upload({ onNext, updateImages }) {
   const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
+  const [toBeUploaded, setToBeUploaded] = useState([]);
 
   useEffect(() => {
-    const storedImages = JSON.parse(sessionStorage.getItem('uploadedImages'));
+    const storedImages = JSON.parse(sessionStorage.getItem('toBeUploaded'));
     if (storedImages && storedImages.length > 0) {
       const restoredPreviews = storedImages.map(image => ({
         url: image.base64,
         name: image.name,
         file: null
       }));
-      setPreviews(restoredPreviews);
+      setToBeUploaded(restoredPreviews);
     }
   }, []);
 
@@ -61,7 +61,7 @@ function Upload({ onNext, updateImages }) {
         base64: base64
       };
     }));
-    sessionStorage.setItem('uploadedImages', JSON.stringify(imageData));
+    sessionStorage.setItem('toBeUploaded', JSON.stringify(imageData));
   };
 
   const createPreviews = async (selectedFiles) => {
@@ -70,7 +70,7 @@ function Upload({ onNext, updateImages }) {
       name: file.name,
       file: file
     }));
-    setPreviews(prevPreviews => {
+    setToBeUploaded(prevPreviews => {
       const updated = [...prevPreviews, ...newPreviews];
       saveToSessionStorage(updated);
       return updated;
@@ -78,39 +78,46 @@ function Upload({ onNext, updateImages }) {
   };
 
   const handleDelete = (indexToDelete) => {
-    URL.revokeObjectURL(previews[indexToDelete].url);
+    URL.revokeObjectURL(toBeUploaded[indexToDelete].url);
 
-    const updatedPreviews = previews.filter((_, index) => index !== indexToDelete);
-    setPreviews(updatedPreviews);
+    const updatedPreviews = toBeUploaded.filter((_, index) => index !== indexToDelete);
+    setToBeUploaded(updatedPreviews);
     setFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToDelete));
     saveToSessionStorage(updatedPreviews);
   };
 
   const handleNextClick = async () => {
-    const imageData = await Promise.all(previews.map(async (preview) => {
+    const imageData = await Promise.all(toBeUploaded.map(async (preview) => {
       let base64 = preview.url;
       if (preview.file) {
         base64 = await fileToBase64(preview.file);
       }
       return {
         name: preview.name,
-        base64: base64
+        base64: base64,
+        url: preview.url // Preserve the object URL for new images
       };
     }));
 
-    // Store in sessionStorage for fallback restore use
-    sessionStorage.setItem('uploadedImages', JSON.stringify(imageData));
+    // Retrieve existing uploadedImages from sessionStorage
+    const existingImages = JSON.parse(sessionStorage.getItem('uploadedImages')) || [];
+
+    // Append new images to the existing ones
+    const updatedImages = [...existingImages, ...imageData];
+
+    // Store the updated list in sessionStorage
+    sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
 
     // Transform data so that CropResize receives { name, url } instead of base64
-    const transformedData = imageData.map((img) => ({
+    const transformedData = updatedImages.map((img) => ({
       name: img.name,
-      url: img.base64
+      url: img.url || img.base64 // Preserve the original URL if it exists
     }));
 
     updateImages(transformedData);
-    setPreviews([]);
+    setToBeUploaded([]);
     setFiles([]);
-    sessionStorage.removeItem('uploadedImages');
+    sessionStorage.removeItem('toBeUploaded');
     onNext('Crop & Resize');
   };
 
@@ -139,11 +146,11 @@ function Upload({ onNext, updateImages }) {
         </label>
       </div>
 
-      {previews.length > 0 && (
+      {toBeUploaded.length > 0 && (
         <div className="preview-section">
           <h3>Selected Images</h3>
           <div className="preview-grid">
-            {previews.map((preview, index) => (
+            {toBeUploaded.map((preview, index) => (
               <div key={index} className="preview-card">
                 <img src={preview.url} alt={preview.name} />
                 <div className="preview-info">
@@ -161,7 +168,7 @@ function Upload({ onNext, updateImages }) {
           <button 
             onClick={handleNextClick}
             className="next-button"
-            disabled={previews.length === 0}
+            disabled={toBeUploaded.length === 0}
           >
             Continue to Edit
           </button>
