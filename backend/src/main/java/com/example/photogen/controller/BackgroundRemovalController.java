@@ -106,7 +106,7 @@ public class BackgroundRemovalController {
 
         Mat faceImage = drawnImage.clone();
         Mat faceImageClone = faceImage.clone();
-        Mat formalImage = Imgcodecs.imread("src/main/resources/images/formal2.png");
+        Mat formalImage = Imgcodecs.imread("src/main/resources/images/formal3.png");
         if (formalImage.empty()) {
             throw new IllegalArgumentException("Formal image not found");
         }
