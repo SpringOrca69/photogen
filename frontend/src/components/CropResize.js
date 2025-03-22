@@ -76,16 +76,12 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
         setIsCropMode(true);
         setAspectRatio(passportAspectRatio);
         
-        // Create an image to get dimensions
-        const img = new Image();
-        img.src = images[currentImageIndex].url;
-        
         // Use a longer timeout to ensure cropper is fully initialized
         setTimeout(() => {
           const cropper = cropperRef.current?.cropper;
           if (cropper) {
-            // Get the original data from the API
-            const { x, y, width, height } = data.cropData;
+            // Get crop data from the API
+            const { left, top, width, height } = data.cropData;
             
             // Reset the cropper to prepare for new cropbox
             cropper.clear();
@@ -99,42 +95,50 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
             
             // Wait for the cropper to be ready after reset
             setTimeout(() => {
-              // Get canvas and container dimensions to properly set position
+              // Get canvas and container dimensions
               const canvasData = cropper.getCanvasData();
               const containerData = cropper.getContainerData();
-            
-              // Create the cropbox with the data from backend
-              // The crop box position needs to be relative to the canvas
+              
+              // Calculate the scale ratio between original image and displayed image
+              const scaleX = canvasData.width / cropper.getImageData().naturalWidth;
+              const scaleY = canvasData.height / cropper.getImageData().naturalHeight;
+              
+              // Create the cropbox with the data from backend, scaled properly
               const cropBoxData = {
-                left: x + canvasData.left,
-                top: y + canvasData.top,
-                width: width,
-                height: height
+                left: (left * scaleX) + canvasData.left,
+                top: (top * scaleY) + canvasData.top,
+                width: width * scaleX,
+                height: height * scaleY
               };
               
-              console.log("Setting cropbox with data:", cropBoxData);
+              // Apply the cropbox
               cropper.setCropBoxData(cropBoxData);
               
-              // Make sure the cropbox is visible and centered in the viewport
-              cropper.crop();
-              
-              // Add additional check to verify the crop box is fully visible
+              // Check if cropbox is fully visible
               const currentCropBox = cropper.getCropBoxData();
-              console.log("Current cropbox after setting:", currentCropBox);
+              const isOutOfBounds = 
+                currentCropBox.left < 0 || 
+                currentCropBox.top < 0 || 
+                currentCropBox.left + currentCropBox.width > containerData.width ||
+                currentCropBox.top + currentCropBox.height > containerData.height;
               
-              // If the cropbox is partially outside the visible area, adjust it
-              if (currentCropBox.top < 0 || 
-                  currentCropBox.left < 0 ||
-                  currentCropBox.top + currentCropBox.height > containerData.height ||
-                  currentCropBox.left + currentCropBox.width > containerData.width) {
+              // If the cropbox is outside visible area, adjust the view
+              if (isOutOfBounds) {
+                // Calculate zoom level that will fit the cropbox
+                const zoomX = containerData.width / (cropBoxData.width * 1.1);
+                const zoomY = containerData.height / (cropBoxData.height * 1.1);
+                const zoom = Math.min(zoomX, zoomY, 1); // Don't zoom in
                 
-                // Center the cropbox in the visible area
-                cropper.zoomTo(0.9); // Slightly zoom out to ensure visibility
+                // Apply zoom
+                cropper.zoomTo(zoom);
                 
-                // Move view to center on the cropbox
+                // Center the image on the crop box
+                const cropCenterX = cropBoxData.left + cropBoxData.width / 2;
+                const cropCenterY = cropBoxData.top + cropBoxData.height / 2;
+                
                 cropper.moveTo(
-                  Math.max(0, (containerData.width - currentCropBox.width) / 2),
-                  Math.max(0, (containerData.height - currentCropBox.height) / 2)
+                  containerData.width / 2 - cropCenterX,
+                  containerData.height / 2 - cropCenterY
                 );
               }
             }, 200);
