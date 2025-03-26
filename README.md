@@ -56,9 +56,8 @@ Before running the application, make sure you have the following installed:
    
 4. Put the jar file onto the system environment path
 
-## Setup and Run
+## Run Application
 
-### Backend Setup
 1. Open a terminal and navigate to the `backend` directory:
    cd backend
 
