@@ -1,7 +1,7 @@
 import React from 'react';
 import './ImageGallery.css';
 
-function ImageGallery({ images, currentImageIndex, selectedIndices = [], isEditMode, handleThumbnailClick, handleDeleteImage }) {
+function ImageGallery({ images, currentImageIndex, selectedIndices = [], isEditMode, handleThumbnailClick }) {
   return (
     <section className={`thumbnails-section ${isEditMode ? 'disabled' : ''}`}>
       <h2 className="section-title">Image Gallery</h2>
@@ -19,15 +19,6 @@ function ImageGallery({ images, currentImageIndex, selectedIndices = [], isEditM
             >
               <div className="thumbnail-image">
                 <img src={image.url} alt={`Version ${index + 1}`} />
-                <button
-                  className="delete-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteImage(index);
-                  }}
-                >
-                  &times;
-                </button>
               </div>
               <div className="thumbnail-info">
                 <span className="thumbnail-name">{image.name}</span>
