@@ -71,7 +71,7 @@ Before running the application, make sure you have the following installed:
    cd frontend
 
 5. Install npm dependencies:
-   npm install @wellbees/color-picker-input
+   npm install @wellbees/color-picker-input jszip file-saver
 
 6. Start the React application:
    npm start
