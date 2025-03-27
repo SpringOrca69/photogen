@@ -166,26 +166,13 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const handleAspectRatioChange = (ratio) => {
     setAspectRatio(ratio);
     const cropper = cropperRef.current?.cropper;
-
+  
     if (cropper) {
       cropper.setAspectRatio(ratio);
       if (ratio === null) {
         cropper.setDragMode('crop');
       }
-
-      // Duplicate the image with the selected aspect ratio
-      const croppedCanvas = cropper.getCroppedCanvas();
-      const croppedImage = croppedCanvas.toDataURL();
-
-      const newImage = {
-        url: croppedImage,
-        name: `${images[currentImageIndex].name}_aspect_${ratio}`,
-        originalIndex: currentImageIndex
-      };
-
-      const updatedImages = [...images, newImage];
-      setImages(updatedImages);
-      sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
+      // Removed image creation code - this now only happens in handleSaveCrop
     }
   };
 
@@ -199,19 +186,19 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     if (cropper) {
       const croppedCanvas = cropper.getCroppedCanvas();
       const croppedImage = croppedCanvas.toDataURL();
-
+  
       const newImage = {
         url: croppedImage,
         name: `${images[currentImageIndex].name}_cropped`,
         originalIndex: currentImageIndex
       };
-
-      const updatedImages = images.map((img, index) =>
-        index === currentImageIndex ? newImage : img
-      );
+  
+      // Add the cropped image to the array instead of replacing the current one
+      const updatedImages = [...images, newImage];
       setImages(updatedImages);
+      setCurrentImageIndex(updatedImages.length - 1); // Select the new image
       sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
-
+  
       setIsCropMode(false);
       setAspectRatio(null);
     }
