@@ -4,6 +4,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -106,11 +107,10 @@ public class BackgroundRemovalController {
 
         Mat faceImage = drawnImage.clone();
         Mat faceImageClone = faceImage.clone();
-        Mat formalImage = Imgcodecs.imread("src/main/resources/images/formal3.png");
+        Mat formalImage = Imgcodecs.imread("src/main/resources/images/formal2.png");
         if (formalImage.empty()) {
             throw new IllegalArgumentException("Formal image not found");
         }
-        Mat resizedFormalImage = resizeImage(formalImage, result.width(), result.height());
         
         if (faceRect.height < 0.6 * drawnImage.height()) {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
@@ -121,25 +121,24 @@ public class BackgroundRemovalController {
             Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
             faceImageClone.copyTo(result, faceForegroundMask);
             
-            Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
-            clothesImageClone.copyTo(result, clothesForegroundMask);
+            //Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
+            //clothesImageClone.copyTo(result, clothesForegroundMask);
 
-            // Keep the facial region from faceForegroundMask
-            Mat facePart = new Mat();
-            faceImageClone.copyTo(facePart, faceForegroundMask);
-            facePart.copyTo(result, faceForegroundMask);
-            
-            // Remove the existing clothesForegroundMask
-            Mat backgroundPart = new Mat();
-            result.copyTo(backgroundPart, clothesForegroundMask);
-            Core.subtract(result, backgroundPart, result);
+            Mat formalImageResized = resizeImage(formalImage, drawnImage.width(), drawnImage.height());
+            Mat formalImageClone = formalImageResized.clone();
+            Rect formalClothesRect = new Rect(0, formalImageResized.height() / 2, formalImageResized.width(), formalImageResized.height() / 2);
+            Mat formalForegroundMask = grabCut(formalImageResized, formalClothesRect);
 
-            if (faceRect.height < 0.6 * drawnImage.height()) {
-                Mat clothesPart = new Mat();
-                resizedFormalImage.copyTo(clothesPart, clothesForegroundMask);
-                clothesPart.copyTo(result, clothesForegroundMask);
-            }
-        } else {
+            ImmutablePair<Mat, Mat> stretchedAndCropped = stretchAndCropHorizontally(formalImageClone, formalForegroundMask, 1.5);
+            formalImageClone = stretchedAndCropped.getLeft();
+            formalForegroundMask = stretchedAndCropped.getRight();
+
+            double largestGap = findLargestGap(faceForegroundMask, formalForegroundMask) * 0.6;
+            Mat formalImageTranslated = shiftDown(formalImageClone, largestGap);
+            Mat formalForegroundMaskTranslated = shiftDown(formalForegroundMask, largestGap);
+            formalImageTranslated.copyTo(result, formalForegroundMaskTranslated);
+        } 
+        else {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.7, 1.2);
             Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
             faceImageClone.copyTo(result, faceForegroundMask);
@@ -182,7 +181,7 @@ public class BackgroundRemovalController {
         newWidth = Math.min(newWidth, (int) (imageSize.width - newX));
         newWidth = Math.max(newWidth, 0);
     
-        int newY = faceRect.y + faceRect.height - 20;
+        int newY = faceRect.y + faceRect.height - 10;
         int newHeight = (int) (imageSize.height - newY);
         newHeight = Math.max(newHeight, 0);
     
@@ -226,8 +225,8 @@ public class BackgroundRemovalController {
     
         Core.bitwise_or(foregroundMask, fgdMask, foregroundMask);
 
-        int iterations = 2;
-        int size = 5;
+        int iterations = 3;
+        int size = 3;
         for (int i = 0; i < iterations; i++) {
             Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(size + i * 2, size + i * 2));
             Imgproc.morphologyEx(foregroundMask, foregroundMask, Imgproc.MORPH_CLOSE, kernel);
@@ -236,9 +235,76 @@ public class BackgroundRemovalController {
         return foregroundMask;
     }
 
+    private Mat shiftDown(Mat inputMat, double shiftY) {
+        // Create the translation matrix
+        Mat translationMatrix = new Mat(2, 3, CvType.CV_32F);
+        translationMatrix.put(0, 0, 1, 0, 0); // tx = 0
+        translationMatrix.put(1, 0, 0, 1, shiftY); // ty = shiftY
+
+        // Calculate the new image size
+        Size newSize = new Size(inputMat.cols(), inputMat.rows());
+
+        // Apply warpAffine
+        Mat outputMat = new Mat();
+        Imgproc.warpAffine(inputMat, outputMat, translationMatrix, newSize);
+
+        return outputMat;
+    }
+
     private Mat resizeImage(Mat image, int width, int height) {
         Mat resizedImage = new Mat();
         Imgproc.resize(image, resizedImage, new Size(width, height), 0, 0, Imgproc.INTER_CUBIC);
         return resizedImage;
+    }
+
+    private int findLargestGap(Mat faceMask, Mat clothesMask){
+        int largestGap = 0;
+        
+        for (int x = 0; x < faceMask.cols(); x++) {
+            int gap;
+            int highest = Integer.MAX_VALUE;
+            int lowest = -1;
+
+            for (int y = 0; y < clothesMask.rows(); y++) {
+                if (clothesMask.get(y, x)[0] == 255 && y < highest) {
+                    highest = y;
+                }
+            }
+
+            for (int y = faceMask.rows() - 1; y >= 0; y--) {
+                if (faceMask.get(y, x)[0] == 255 && y > lowest) {
+                    lowest = y;
+                }
+            }
+
+            if (highest == 0 || lowest == 0) {
+                continue;
+            }
+
+            gap = lowest - highest;
+            if (gap > largestGap) {
+                largestGap = gap;
+            }
+        }
+
+        return largestGap;
+    }
+
+    private ImmutablePair<Mat, Mat> stretchAndCropHorizontally(Mat image, Mat mask, double horizontalScale) {
+        int newWidth = (int) (image.cols() * horizontalScale);
+        Size newSize = new Size(newWidth, image.rows());
+
+        Mat resizedImage = new Mat();
+        Mat resizedMask = new Mat();
+        Imgproc.resize(image, resizedImage, newSize);
+        Imgproc.resize(mask, resizedMask, newSize);
+
+        int offsetX = (newWidth - image.cols()) / 2;
+
+        Rect cropRect = new Rect(offsetX, 0, image.cols(), image.rows());
+        Mat croppedImage = resizedImage.submat(cropRect).clone();
+        Mat croppedMask = resizedMask.submat(cropRect).clone();
+
+        return new ImmutablePair<>(croppedImage, croppedMask);
     }
 }

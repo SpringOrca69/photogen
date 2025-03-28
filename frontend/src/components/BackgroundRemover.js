@@ -101,7 +101,7 @@ function BackgroundRemover({ onNext, onBack }) {
         body: JSON.stringify({
           image: imageDataUrl,
           backgroundColour: backgroundColour,
-          customBackground: customBackground,
+          customBackground: customBackground
         }),
       });
   
