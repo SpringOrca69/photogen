@@ -1,0 +1,161 @@
+.passport-strip-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.passport-strip-container h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.passport-strip-container h3 {
+  margin-bottom: 10px;
+  color: #444;
+}
+
+.passport-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f8f8;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.control-group label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.control-group input,
+.control-group select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.control-group input[type="color"] {
+  height: 36px;
+  padding: 2px;
+}
+
+.preview {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f8f8;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.image-preview {
+  max-width: 400px;
+  height: 300px;
+  border: 1px solid #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.create-button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  align-self: flex-start;
+  margin-bottom: 20px;
+  transition: background-color 0.2s;
+}
+
+.create-button:hover {
+  background-color: #45a049;
+}
+
+.create-button:active {
+  background-color: #3e8e41;
+  transform: translateY(1px);
+}
+
+.image-gallery-container {
+  margin-top: 10px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+/* Empty state styling */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #777;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 40px;
+}
+
+.empty-state h2 {
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.empty-state p {
+  max-width: 400px;
+  color: #777;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .passport-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .image-preview {
+    max-width: 100%;
+    height: 250px;
+  }
+}
+
+/* Ensure the component integrates well with the ImageGallery */
+.image-gallery-container .image-gallery {
+  margin-top: 0;
+}
+
+/* Override any ImageGallery styles as needed */
+.image-gallery-container .thumbnails-container {
+  padding: 10px 0;
+}
+
+/* Style the dropdown to be more consistent with other controls */
+.control-group select {
+  background-color: white;
+  cursor: pointer;
+  height: 36px;
+}
