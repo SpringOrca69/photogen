@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/background-removal")
-public class BackgroundRemovalController {
+@RequestMapping("/api/clothes-replacement")
+public class ClothesReplacementController {
 
     private static final Logger logger = LoggerFactory.getLogger(BackgroundRemovalController.class);
 
@@ -33,59 +33,71 @@ public class BackgroundRemovalController {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    @PostMapping("/remove")
-    public ResponseEntity<?> removeBackground(@RequestBody Map<String, String> payload) {
+    @PostMapping("/replace")
+    public ResponseEntity<?> replaceClothes(@RequestBody Map<String, String> payload) {
         try {
-            String backgroundColour = payload.get("backgroundColour");
-
-            String imageData = payload.get("image").split(",")[1];
-            byte[] inputImageBytes = java.util.Base64.getDecoder().decode(imageData);
-            Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
-
-            Mat customBackground;
-            if (payload.get("customBackground") != null) {
-                String backgroundData = payload.get("customBackground").split(",")[1];
-                byte[] backgroundImageBytes = java.util.Base64.getDecoder().decode(backgroundData);
-                customBackground = Imgcodecs.imdecode(new MatOfByte(backgroundImageBytes), Imgcodecs.IMREAD_COLOR);
-            } else {
-                customBackground = null;
+            if (!payload.containsKey("image") || !payload.containsKey("clothing")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing required images in payload"));
             }
 
-            String dataUrl = processUserDrawing(inputImage, customBackground, backgroundColour);
+            String imageData = payload.get("image");
+            String clothingImageData = payload.get("clothing");
+
+            // Validate base64 image format
+            if (!imageData.contains(",") || !clothingImageData.contains(",")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image format"));
+            }
+
+            imageData = imageData.split(",")[1];
+            clothingImageData = clothingImageData.split(",")[1];
+
+            byte[] inputImageBytes;
+            byte[] clothingImageBytes;
+
+            try {
+                inputImageBytes = Base64.getDecoder().decode(imageData);
+                clothingImageBytes = Base64.getDecoder().decode(clothingImageData);
+            } catch (IllegalArgumentException e) {
+                logger.error("Base64 decoding failed: " + e.getMessage());
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid base64 image data"));
+            }
+
+            Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
+            if (inputImage.empty()) {
+                logger.error("Failed to decode input image");
+                return ResponseEntity.badRequest().body(Map.of("error", "Failed to decode input image"));
+            }
+
+            Mat formalImage = Imgcodecs.imdecode(new MatOfByte(clothingImageBytes), Imgcodecs.IMREAD_COLOR);
+            if (formalImage.empty()) {
+                logger.error("Failed to decode clothing image");
+                return ResponseEntity.badRequest().body(Map.of("error", "Failed to decode clothing image"));
+            }
+
+            String dataUrl = processUserDrawing(inputImage, formalImage);
 
             return ResponseEntity.ok(Map.of(
-                    "processedImageDataUrl", dataUrl, // Return the data URL
-                    "message", "Background removed successfully"
+                    "processedImageDataUrl", dataUrl,
+                    "message", "Clothes replaced successfully"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Face detection failed: " + e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", "Processing failed: " + e.getMessage()));
+            logger.error("Processing failed: ", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", "Processing failed: " + e.getMessage(),
+                    "details", e.getClass().getName()
+            ));
         }
     }
 
-    private String processUserDrawing(Mat drawnImage, Mat customBackground, String backgroundColour) {
+    private String processUserDrawing(Mat drawnImage, Mat formalImage) {
         if (drawnImage.empty()) {
             throw new IllegalArgumentException("Empty image");
         }
 
-        if (customBackground != null && customBackground.empty()) {
-            throw new IllegalArgumentException("Empty custom background image");
-        }
-
-        // Create a new Mat object to store the result depending on whether a custom background is provided
-        Mat result;
-        if (customBackground != null) {
-            Mat resizedBackground = resizeImage(customBackground, drawnImage.width(), drawnImage.height());
-
-            if (resizedBackground.width() != drawnImage.width() || resizedBackground.height() != drawnImage.height()) {
-                throw new IllegalArgumentException("Custom background image size does not match original image size");
-            }
-
-            result = resizedBackground.clone();
-        } else {
-            result = new Mat(drawnImage.size(), drawnImage.type(), parseColor(backgroundColour));
-        }
+        // Use the input image as the base for our result
+        Mat result = drawnImage.clone();
 
         CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/haarcascade_frontalface_default.xml").getPath().substring(1));
         MatOfRect faceDetections = new MatOfRect();
@@ -104,23 +116,28 @@ public class BackgroundRemovalController {
 
         Mat faceImage = drawnImage.clone();
         Mat faceImageClone = faceImage.clone();
+        Mat resizedFormalImage = resizeImage(formalImage, result.width(), result.height());
 
-        // Expanded region to include both face and body
-        Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
-        Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
+        if (faceRect.height < 0.6 * drawnImage.height()) {
+            Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
+            Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
+            Mat clothesImage = drawnImage.clone();
 
-        // Process face region
-        Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
-        faceImageClone.copyTo(result, faceForegroundMask);
+            // Only get the clothes mask
+            Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
 
-        // Process clothes region
-        Mat clothesImage = drawnImage.clone();
-        Mat clothesImageClone = clothesImage.clone();
-        Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
-        clothesImageClone.copyTo(result, clothesForegroundMask);
+            // Remove existing clothes
+            Mat backgroundPart = new Mat();
+            result.copyTo(backgroundPart, clothesForegroundMask);
+            Core.subtract(result, backgroundPart, result);
+
+            // Add formal clothes
+            Mat clothesPart = new Mat();
+            resizedFormalImage.copyTo(clothesPart, clothesForegroundMask);
+            Core.add(result, clothesPart, result);
+        }
 
         String uniqueFileName = UUID.randomUUID().toString() + ".jpg";
-
         String outputPath = "src/main/resources/processed/" + uniqueFileName;
         Imgcodecs.imwrite(outputPath, result);
         logger.info("Image saved at: " + outputPath);
