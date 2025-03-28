@@ -8,7 +8,7 @@ function Sidebar({ onMenuItemClick, activeItem, handleUndo, handleRedo, undoDisa
     { name: 'Background Remover', icon: '🎭' },
     { name: 'T-Shirt Editor', icon: '👕' },
     { name: 'Photo Enhancement', icon: '✏️' },
-    { name: 'Make Passport Strip', icon: '🖼️' },
+    { name: 'Make Photo Strip', icon: '🖼️' },
     { name: 'Download photos in .jpeg, .png, etc.', icon: '💾' }
   ];
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import './PassportStrip.css';
+import './photostrip.css';
 import ImageGallery from './ImageGallery';
 
 // Debug helper component to display image details
@@ -47,7 +47,7 @@ const ImageDebugger = ({ image, index, isSelected }) => {
     );
 };
 
-const PassportStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex }) => {
+const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex }) => {
     const [rows, setRows] = useState(2);
     const [cols, setColumns] = useState(3);
     const [spacing, setSpacing] = useState(10);
@@ -429,4 +429,4 @@ const PassportStrip = ({ images, setImages, currentImageIndex, setCurrentImageIn
     );
 };
 
-export default PassportStrip;
+export default PhotoStrip;
