@@ -10,13 +10,17 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const cropperRef = useRef(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
-  const aspectRatioOptions = [
+  // Split aspect ratio options into two groups for two rows
+  const aspectRatioOptionsRow1 = [
     { label: '35×45mm Passport', value: 35 / 45 },
     { label: '1:1 Square', value: 1 },
     { label: '4:3 Standard', value: 4 / 3 },
     { label: '16:9 Widescreen', value: 16 / 9 },
     { label: '3:4 Portrait', value: 3 / 4 },
     { label: 'Free Size', value: null },
+  ];
+  
+  const aspectRatioOptionsRow2 = [
     { label: '2R (6.35×8.89cm)', value: 6.35 / 8.89 },
     { label: '3R (8.89×12.7cm)', value: 8.89 / 12.7 },
     { label: '4R (10.2×15.2cm)', value: 10.2 / 15.2 },
@@ -283,16 +287,29 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
               </div>
             ) : (
               <div className="crop-controls">
-                <div className="aspect-ratio-controls">
-                  {aspectRatioOptions.map((option) => (
-                    <button
-                      key={option.label}
-                      onClick={() => handleAspectRatioChange(option.value)}
-                      className={`aspect-ratio-button ${aspectRatio === option.value ? 'active' : ''}`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                <div className="aspect-ratio-controls-container">
+                  <div className="aspect-ratio-row">
+                    {aspectRatioOptionsRow1.map((option) => (
+                      <button
+                        key={option.label}
+                        onClick={() => handleAspectRatioChange(option.value)}
+                        className={`aspect-ratio-button ${aspectRatio === option.value ? 'active' : ''}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="aspect-ratio-row">
+                    {aspectRatioOptionsRow2.map((option) => (
+                      <button
+                        key={option.label}
+                        onClick={() => handleAspectRatioChange(option.value)}
+                        className={`aspect-ratio-button ${aspectRatio === option.value ? 'active' : ''}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="crop-actions">
                   <button onClick={handleCancelCrop} className="control-button secondary">
