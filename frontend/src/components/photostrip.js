@@ -51,7 +51,7 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
     const [rows, setRows] = useState(2);
     const [cols, setColumns] = useState(3);
     const [spacing, setSpacing] = useState(10);
-    const [backgroundColor, setBackgroundColor] = useState('#FFFFFF');
+    const [photostripColor, setPhotostripColor] = useState('#FFFFFF');
     const [errorMessage, setErrorMessage] = useState('');
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [invalidImagesCount, setInvalidImagesCount] = useState(0);
@@ -118,7 +118,7 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
         canvas.height = Math.max(200, totalHeight);
 
         // After resizing canvas (which clears it), redraw background
-        ctx.fillStyle = backgroundColor;
+        ctx.fillStyle = photostripColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Center the strip in the canvas
@@ -133,7 +133,7 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
                 ctx.drawImage(img, x, y, maxPhotoWidth, maxPhotoHeight);
             }
         }
-    }, [rows, cols, spacing, backgroundColor]);
+    }, [rows, cols, spacing, photostripColor]);
 
     // Set up the preview image
     useEffect(() => {
@@ -216,7 +216,7 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
             const ctx = canvas.getContext('2d');
 
             // Fill background
-            ctx.fillStyle = backgroundColor;
+            ctx.fillStyle = photostripColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw the passport photos in a grid
@@ -369,13 +369,13 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
                 </div>
 
                 <div className="control-group">
-                    <label>Background Color:</label>
+                    <label>Photostrip Color:</label>
                     <input
                         type="color"
-                        value={backgroundColor}
+                        value={photostripColor}
                         onChange={(e) => {
                             const newColor = e.target.value;
-                            setBackgroundColor(newColor);
+                            setPhotostripColor(newColor);
                             // Force immediate preview update on next tick
                             setTimeout(updatePreview, 0);
                         }}
