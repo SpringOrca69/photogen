@@ -10,13 +10,24 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const cropperRef = useRef(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
 
-  const aspectRatioOptions = [
-    { label: '35×45mm Passport', value: 35/45 },
+  // Split aspect ratio options into two groups for two rows
+  const aspectRatioOptionsRow1 = [
+    { label: '35×45mm Passport', value: 35 / 45 },
     { label: '1:1 Square', value: 1 },
-    { label: '4:3 Standard', value: 4/3 },
-    { label: '16:9 Widescreen', value: 16/9 },
-    { label: '3:4 Portrait', value: 3/4 },
-    { label: 'Free Size', value: null }
+    { label: '4:3 Standard', value: 4 / 3 },
+    { label: '16:9 Widescreen', value: 16 / 9 },
+    { label: '3:4 Portrait', value: 3 / 4 },
+    { label: 'Free Size', value: null },
+  ];
+  
+  const aspectRatioOptionsRow2 = [
+    { label: '2R (6.35×8.89cm)', value: 6.35 / 8.89 },
+    { label: '3R (8.89×12.7cm)', value: 8.89 / 12.7 },
+    { label: '4R (10.2×15.2cm)', value: 10.2 / 15.2 },
+    { label: '5R (12.7×17.8cm)', value: 12.7 / 17.8 },
+    { label: '6R (15.2×20.3cm)', value: 15.2 / 20.3 },
+    { label: '8R (20.3×25.4cm)', value: 20.3 / 25.4 },
+    { label: '10R (25.4×30.5cm)', value: 25.4 / 30.5 }
   ];
 
   const handleStartCrop = () => {
@@ -159,12 +170,13 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const handleAspectRatioChange = (ratio) => {
     setAspectRatio(ratio);
     const cropper = cropperRef.current?.cropper;
-    
+  
     if (cropper) {
       cropper.setAspectRatio(ratio);
       if (ratio === null) {
         cropper.setDragMode('crop');
       }
+      // Removed image creation code - this now only happens in handleSaveCrop
     }
   };
 
@@ -178,19 +190,19 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     if (cropper) {
       const croppedCanvas = cropper.getCroppedCanvas();
       const croppedImage = croppedCanvas.toDataURL();
-      
+  
       const newImage = {
         url: croppedImage,
         name: `${images[currentImageIndex].name}_cropped`,
         originalIndex: currentImageIndex
       };
-      
-      const updatedImages = images.map((img, index) => 
-        index === currentImageIndex ? newImage : img
-      );
+  
+      // Add the cropped image to the array instead of replacing the current one
+      const updatedImages = [...images, newImage];
       setImages(updatedImages);
+      setCurrentImageIndex(updatedImages.length - 1); // Select the new image
       sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
-
+  
       setIsCropMode(false);
       setAspectRatio(null);
     }
@@ -266,16 +278,29 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
               </div>
             ) : (
               <div className="crop-controls">
-                <div className="aspect-ratio-controls">
-                  {aspectRatioOptions.map((option) => (
-                    <button
-                      key={option.label}
-                      onClick={() => handleAspectRatioChange(option.value)}
-                      className={`aspect-ratio-button ${aspectRatio === option.value ? 'active' : ''}`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                <div className="aspect-ratio-controls-container">
+                  <div className="aspect-ratio-row">
+                    {aspectRatioOptionsRow1.map((option) => (
+                      <button
+                        key={option.label}
+                        onClick={() => handleAspectRatioChange(option.value)}
+                        className={`aspect-ratio-button ${aspectRatio === option.value ? 'active' : ''}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="aspect-ratio-row">
+                    {aspectRatioOptionsRow2.map((option) => (
+                      <button
+                        key={option.label}
+                        onClick={() => handleAspectRatioChange(option.value)}
+                        className={`aspect-ratio-button ${aspectRatio === option.value ? 'active' : ''}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="crop-actions">
                   <button onClick={handleCancelCrop} className="control-button secondary">

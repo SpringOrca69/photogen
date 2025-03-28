@@ -7,6 +7,7 @@ import './App.css';
 import TShirtEditor from './components/TShirtEditor';
 import Export from './components/Export';
 import PhotoEnhancement from './components/PhotoEnhancement';
+import PhotoStrip from './components/photostrip';
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('Welcome');
@@ -94,6 +95,13 @@ function App() {
         />;
       case 'Photo Enhancement':
         return <PhotoEnhancement 
+          images={images} 
+          setImages={updateImages} 
+          currentImageIndex={currentImageIndex}
+          setCurrentImageIndex={setCurrentImageIndex}
+        />;
+        case 'Make Photo Strip':
+        return <PhotoStrip 
           images={images} 
           setImages={updateImages} 
           currentImageIndex={currentImageIndex}
