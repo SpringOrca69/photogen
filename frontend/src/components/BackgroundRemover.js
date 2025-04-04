@@ -167,18 +167,6 @@ function BackgroundRemover({ onNext, onBack }) {
             accept="image/*"
           />
         </div>
-        <h3>Select Clothing Options</h3>
-        <div className="clothing-options">
-          {clothingImages.map((image, index) => (
-            <div
-              key={index}
-              className={`clothing-card ${selectedClothingIndex === index ? 'selected' : ''}`}
-              onClick={() => handleClothingOptionClick(index)}
-            >
-              <img src={image} alt={`Clothing Option ${index}`} />
-            </div>
-          ))}
-        </div>
       </div>
       <div className="controls">
         <button 

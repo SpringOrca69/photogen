@@ -3,7 +3,7 @@ package com.example.photogen.controller;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/background-removal")
-public class BackgroundRemovalController {
+@RequestMapping("/api/clothes-replacement")
+public class ClothesReplacementController {
 
     private static final Logger logger = LoggerFactory.getLogger(BackgroundRemovalController.class);
 
@@ -33,59 +33,71 @@ public class BackgroundRemovalController {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    @PostMapping("/remove")
-    public ResponseEntity<?> removeBackground(@RequestBody Map<String, String> payload) {
+    @PostMapping("/replace")
+    public ResponseEntity<?> replaceClothes(@RequestBody Map<String, String> payload) {
         try {
-            String backgroundColour = payload.get("backgroundColour");
-
-            String imageData = payload.get("image").split(",")[1];
-            byte[] inputImageBytes = java.util.Base64.getDecoder().decode(imageData);
-            Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
-
-            Mat customBackground;
-            if (payload.get("customBackground") != null) {
-                String backgroundData = payload.get("customBackground").split(",")[1];
-                byte[] backgroundImageBytes = java.util.Base64.getDecoder().decode(backgroundData);
-                customBackground = Imgcodecs.imdecode(new MatOfByte(backgroundImageBytes), Imgcodecs.IMREAD_COLOR);
-            } else {
-                customBackground = null;
+            if (!payload.containsKey("image") || !payload.containsKey("clothing")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing required images in payload"));
             }
 
-            String dataUrl = processUserDrawing(inputImage, customBackground, backgroundColour);
+            String imageData = payload.get("image");
+            String clothingImageData = payload.get("clothing");
+
+            // Validate base64 image format
+            if (!imageData.contains(",") || !clothingImageData.contains(",")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image format"));
+            }
+
+            imageData = imageData.split(",")[1];
+            clothingImageData = clothingImageData.split(",")[1];
+
+            byte[] inputImageBytes;
+            byte[] clothingImageBytes;
+
+            try {
+                inputImageBytes = Base64.getDecoder().decode(imageData);
+                clothingImageBytes = Base64.getDecoder().decode(clothingImageData);
+            } catch (IllegalArgumentException e) {
+                logger.error("Base64 decoding failed: " + e.getMessage());
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid base64 image data"));
+            }
+
+            Mat inputImage = Imgcodecs.imdecode(new MatOfByte(inputImageBytes), Imgcodecs.IMREAD_COLOR);
+            if (inputImage.empty()) {
+                logger.error("Failed to decode input image");
+                return ResponseEntity.badRequest().body(Map.of("error", "Failed to decode input image"));
+            }
+
+            Mat formalImage = Imgcodecs.imdecode(new MatOfByte(clothingImageBytes), Imgcodecs.IMREAD_COLOR);
+            if (formalImage.empty()) {
+                logger.error("Failed to decode clothing image");
+                return ResponseEntity.badRequest().body(Map.of("error", "Failed to decode clothing image"));
+            }
+
+            String dataUrl = processUserDrawing(inputImage, formalImage);
 
             return ResponseEntity.ok(Map.of(
-                    "processedImageDataUrl", dataUrl, // Return the data URL
-                    "message", "Background removed successfully"
+                    "processedImageDataUrl", dataUrl,
+                    "message", "Clothes replaced successfully"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Face detection failed: " + e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", "Processing failed: " + e.getMessage()));
+            logger.error("Processing failed: ", e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", "Processing failed: " + e.getMessage(),
+                    "details", e.getClass().getName()
+            ));
         }
     }
 
-    private String processUserDrawing(Mat drawnImage, Mat customBackground, String backgroundColour) {
+    private String processUserDrawing(Mat drawnImage, Mat formalImage) {
         if (drawnImage.empty()) {
             throw new IllegalArgumentException("Empty image");
         }
 
-        if (customBackground != null && customBackground.empty()) {
-            throw new IllegalArgumentException("Empty custom background image");
-        }
-
-        // Create a new Mat object to store the result depending on whether a custom background is provided
-        Mat result;
-        if (customBackground != null) {
-            Mat resizedBackground = resizeImage(customBackground, drawnImage.width(), drawnImage.height());
-
-            if (resizedBackground.width() != drawnImage.width() || resizedBackground.height() != drawnImage.height()) {
-                throw new IllegalArgumentException("Custom background image size does not match original image size");
-            }
-
-            result = resizedBackground.clone();
-        } else {
-            result = new Mat(drawnImage.size(), drawnImage.type(), parseColor(backgroundColour));
-        }
+        // Use the input image as the base for our result
+        Mat result = drawnImage.clone();
 
         CascadeClassifier faceDetector = new CascadeClassifier(getClass().getResource("/haarcascade_frontalface_default.xml").getPath().substring(1));
         MatOfRect faceDetections = new MatOfRect();
@@ -104,45 +116,28 @@ public class BackgroundRemovalController {
 
         Mat faceImage = drawnImage.clone();
         Mat faceImageClone = faceImage.clone();
-        Mat formalImage = Imgcodecs.imread("src/main/resources/images/formal2.png");
-        if (formalImage.empty()) {
-            throw new IllegalArgumentException("Formal image not found");
-        }
-        
+        Mat resizedFormalImage = resizeImage(formalImage, result.width(), result.height());
+
         if (faceRect.height < 0.6 * drawnImage.height()) {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
             Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
             Mat clothesImage = drawnImage.clone();
-            Mat clothesImageClone = clothesImage.clone();
-            
-            Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
-            faceImageClone.copyTo(result, faceForegroundMask);
-            
-            //Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
-            //clothesImageClone.copyTo(result, clothesForegroundMask);
 
-            Mat formalImageResized = resizeImage(formalImage, drawnImage.width(), drawnImage.height());
-            Mat formalImageClone = formalImageResized.clone();
-            Rect formalClothesRect = new Rect(0, formalImageResized.height() / 2, formalImageResized.width(), formalImageResized.height() / 2);
-            Mat formalForegroundMask = grabCut(formalImageResized, formalClothesRect);
+            // Only get the clothes mask
+            Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
 
-            ImmutablePair<Mat, Mat> stretchedAndCropped = stretchAndCropHorizontally(formalImageClone, formalForegroundMask, 1.5);
-            formalImageClone = stretchedAndCropped.getLeft();
-            formalForegroundMask = stretchedAndCropped.getRight();
+            // Remove existing clothes
+            Mat backgroundPart = new Mat();
+            result.copyTo(backgroundPart, clothesForegroundMask);
+            Core.subtract(result, backgroundPart, result);
 
-            double largestGap = findLargestGap(faceForegroundMask, formalForegroundMask) * 0.6;
-            Mat formalImageTranslated = shiftDown(formalImageClone, largestGap);
-            Mat formalForegroundMaskTranslated = shiftDown(formalForegroundMask, largestGap);
-            formalImageTranslated.copyTo(result, formalForegroundMaskTranslated);
-        } 
-        else {
-            Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.7, 1.2);
-            Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
-            faceImageClone.copyTo(result, faceForegroundMask);
+            // Add formal clothes
+            Mat clothesPart = new Mat();
+            resizedFormalImage.copyTo(clothesPart, clothesForegroundMask);
+            Core.add(result, clothesPart, result);
         }
 
         String uniqueFileName = UUID.randomUUID().toString() + ".jpg";
-
         String outputPath = "src/main/resources/processed/" + uniqueFileName;
         Imgcodecs.imwrite(outputPath, result);
         logger.info("Image saved at: " + outputPath);
@@ -178,8 +173,8 @@ public class BackgroundRemovalController {
         int newX = Math.max(0, faceRect.x - (newWidth - faceRect.width) / 2);
         newWidth = Math.min(newWidth, (int) (imageSize.width - newX));
         newWidth = Math.max(newWidth, 0);
-    
-        int newY = faceRect.y + faceRect.height - 10;
+
+        int newY = faceRect.y + faceRect.height - 20;
         int newHeight = (int) (imageSize.height - newY);
         newHeight = Math.max(newHeight, 0);
 
@@ -222,8 +217,8 @@ public class BackgroundRemovalController {
 
         Core.bitwise_or(foregroundMask, fgdMask, foregroundMask);
 
-        int iterations = 3;
-        int size = 3;
+        int iterations = 2;
+        int size = 5;
         for (int i = 0; i < iterations; i++) {
             Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(size + i * 2, size + i * 2));
             Imgproc.morphologyEx(foregroundMask, foregroundMask, Imgproc.MORPH_CLOSE, kernel);
@@ -232,76 +227,9 @@ public class BackgroundRemovalController {
         return foregroundMask;
     }
 
-    private Mat shiftDown(Mat inputMat, double shiftY) {
-        // Create the translation matrix
-        Mat translationMatrix = new Mat(2, 3, CvType.CV_32F);
-        translationMatrix.put(0, 0, 1, 0, 0); // tx = 0
-        translationMatrix.put(1, 0, 0, 1, shiftY); // ty = shiftY
-
-        // Calculate the new image size
-        Size newSize = new Size(inputMat.cols(), inputMat.rows());
-
-        // Apply warpAffine
-        Mat outputMat = new Mat();
-        Imgproc.warpAffine(inputMat, outputMat, translationMatrix, newSize);
-
-        return outputMat;
-    }
-
     private Mat resizeImage(Mat image, int width, int height) {
         Mat resizedImage = new Mat();
         Imgproc.resize(image, resizedImage, new Size(width, height), 0, 0, Imgproc.INTER_CUBIC);
         return resizedImage;
-    }
-
-    private int findLargestGap(Mat faceMask, Mat clothesMask){
-        int largestGap = 0;
-        
-        for (int x = 0; x < faceMask.cols(); x++) {
-            int gap;
-            int highest = Integer.MAX_VALUE;
-            int lowest = -1;
-
-            for (int y = 0; y < clothesMask.rows(); y++) {
-                if (clothesMask.get(y, x)[0] == 255 && y < highest) {
-                    highest = y;
-                }
-            }
-
-            for (int y = faceMask.rows() - 1; y >= 0; y--) {
-                if (faceMask.get(y, x)[0] == 255 && y > lowest) {
-                    lowest = y;
-                }
-            }
-
-            if (highest == 0 || lowest == 0) {
-                continue;
-            }
-
-            gap = lowest - highest;
-            if (gap > largestGap) {
-                largestGap = gap;
-            }
-        }
-
-        return largestGap;
-    }
-
-    private ImmutablePair<Mat, Mat> stretchAndCropHorizontally(Mat image, Mat mask, double horizontalScale) {
-        int newWidth = (int) (image.cols() * horizontalScale);
-        Size newSize = new Size(newWidth, image.rows());
-
-        Mat resizedImage = new Mat();
-        Mat resizedMask = new Mat();
-        Imgproc.resize(image, resizedImage, newSize);
-        Imgproc.resize(mask, resizedMask, newSize);
-
-        int offsetX = (newWidth - image.cols()) / 2;
-
-        Rect cropRect = new Rect(offsetX, 0, image.cols(), image.rows());
-        Mat croppedImage = resizedImage.submat(cropRect).clone();
-        Mat croppedMask = resizedMask.submat(cropRect).clone();
-
-        return new ImmutablePair<>(croppedImage, croppedMask);
     }
 }
