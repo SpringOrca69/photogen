@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './photostrip.css';
 import ImageGallery from './ImageGallery';
+import CropDisplay from './shared/CropDisplay'; // Add this import
 
 // Debug helper component to display image details
 const ImageDebugger = ({ image, index, isSelected }) => {
@@ -103,15 +104,32 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
 
         // Calculate dimensions
         const img = previewImageRef.current;
-        const aspectRatio = img.naturalWidth / img.naturalHeight;
+        const currentImage = images[currentImageIndex];
+        
+        // Handle crop data if present
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceWidth = img.naturalWidth;
+        let sourceHeight = img.naturalHeight;
+        
+        if (currentImage.cropData) {
+            sourceX = currentImage.cropData.x;
+            sourceY = currentImage.cropData.y;
+            sourceWidth = currentImage.cropData.width;
+            sourceHeight = currentImage.cropData.height;
+        }
+        
+        // Calculate aspect ratio of the source (cropped or original)
+        const aspectRatio = sourceWidth / sourceHeight;
 
-        // Define size for preview photos (scaled down versions)
+        // Define size for preview photos based on aspect ratio
         const maxPhotoWidth = 100;
-        const maxPhotoHeight = maxPhotoWidth / aspectRatio;
+        const photoWidth = maxPhotoWidth;
+        const photoHeight = photoWidth / aspectRatio; // Maintain aspect ratio
 
         // Calculate total width and height with spacing
-        const totalWidth = cols * maxPhotoWidth + (cols - 1) * spacing;
-        const totalHeight = rows * maxPhotoHeight + (rows - 1) * spacing;
+        const totalWidth = cols * photoWidth + (cols - 1) * spacing;
+        const totalHeight = rows * photoHeight + (rows - 1) * spacing;
 
         // Adjust canvas size if needed - this clears the canvas
         canvas.width = Math.max(300, totalWidth);
@@ -128,12 +146,18 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
         // Draw the passport photos in a grid
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                const x = startX + c * (maxPhotoWidth + spacing);
-                const y = startY + r * (maxPhotoHeight + spacing);
-                ctx.drawImage(img, x, y, maxPhotoWidth, maxPhotoHeight);
+                const x = startX + c * (photoWidth + spacing);
+                const y = startY + r * (photoHeight + spacing);
+                
+                // Draw the image with crop applied if present
+                ctx.drawImage(
+                    img, 
+                    sourceX, sourceY, sourceWidth, sourceHeight,
+                    x, y, photoWidth, photoHeight
+                );
             }
         }
-    }, [rows, cols, spacing, photostripColor]);
+    }, [rows, cols, spacing, photostripColor, images, currentImageIndex]);
 
     // Set up the preview image
     useEffect(() => {
@@ -202,9 +226,26 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
         const img = new Image();
 
         img.onload = () => {
-            // Calculate dimensions for each photo in the strip
-            const photoWidth = 413; // Standard passport photo width in pixels (35mm at 300dpi)
-            const photoHeight = 531; // Standard passport photo height in pixels (45mm at 300dpi)
+            // Get source dimensions for drawing (apply crop if present)
+            let sourceX = 0;
+            let sourceY = 0;
+            let sourceWidth = img.width;
+            let sourceHeight = img.height;
+            
+            if (currentImage.cropData) {
+                sourceX = currentImage.cropData.x;
+                sourceY = currentImage.cropData.y;
+                sourceWidth = currentImage.cropData.width;
+                sourceHeight = currentImage.cropData.height;
+            }
+            
+            // Calculate aspect ratio
+            const aspectRatio = sourceWidth / sourceHeight;
+
+            // Standard size for each photo, but maintain the cropped aspect ratio
+            const basePhotoHeight = 531; // Standard passport photo height in pixels (45mm at 300dpi)
+            const photoWidth = Math.round(basePhotoHeight * aspectRatio);
+            const photoHeight = basePhotoHeight;
 
             // Set canvas size based on rows, columns and spacing
             const totalWidth = cols * photoWidth + (cols - 1) * spacing;
@@ -225,7 +266,12 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
                     const x = c * (photoWidth + spacing);
                     const y = r * (photoHeight + spacing);
 
-                    ctx.drawImage(img, x, y, photoWidth, photoHeight);
+                    // Always use drawImage with 9 parameters to properly handle crop
+                    ctx.drawImage(
+                        img,
+                        sourceX, sourceY, sourceWidth, sourceHeight,
+                        x, y, photoWidth, photoHeight
+                    );
                 }
             }
 
@@ -234,9 +280,12 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
                 const newImageUrl = canvas.toDataURL('image/jpeg');
 
                 const newImage = {
-                    url: newImageUrl, // Use url instead of src to be consistent
+                    url: newImageUrl,
                     name: `${currentImage.name || 'image'}-passport-strip.jpg`,
-                    type: 'image/jpeg'
+                    type: 'image/jpeg',
+                    // Don't copy crop data to the strip image
+                    originalWidth: totalWidth,
+                    originalHeight: totalHeight
                 };
 
                 const newImages = [...images, newImage];
@@ -276,6 +325,23 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
             // If we deleted an image before the selected one, decrement the currentImageIndex
             setCurrentImageIndex(currentImageIndex - 1);
         }
+    };
+
+    // Add a function to render the current image with crop applied
+    const renderCurrentImage = () => {
+        const image = images[currentImageIndex];
+        
+        if (!image) {
+            return <div className="no-image-placeholder">No image selected</div>;
+        }
+        
+        return (
+            <CropDisplay 
+                image={image}
+                className="current-image"
+                style={{ maxWidth: '100%', maxHeight: '100%' }}
+            />
+        );
     };
 
     return (
@@ -405,6 +471,13 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
                     <p style={{ fontSize: '0.8em', color: '#666', marginTop: '5px' }}>
                         This preview updates as you change the parameters
                     </p>
+                </div>
+            </div>
+
+            <div className="current-image-display">
+                <h3>Selected Image Preview</h3>
+                <div className="current-image-container">
+                    {renderCurrentImage()}
                 </div>
             </div>
 

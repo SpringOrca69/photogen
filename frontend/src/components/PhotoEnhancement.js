@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './PhotoEnhancement.css';
 import ImageGallery from './ImageGallery';
+import CropDisplay from './shared/CropDisplay';
 
 function PhotoEnhancement({ images, setImages, currentImageIndex, setCurrentImageIndex }) {
 const [brightness, setBrightness] = useState(100);
@@ -38,7 +39,8 @@ useEffect(() => {
     const originalUrl = images[currentImageIndex].originalUrl || images[currentImageIndex].url;
 
     // Check if no adjustments (default state), load saved enhanced image directly
-    if (brightness == 100 && contrast == 100 && skinSmooth == 0) {
+    if (brightness === 100 && contrast === 100 && skinSmooth === 0) {
+        // Just display the image with crop dimensions applied visually
         setEnhancedUrl(images[currentImageIndex].url);
     } else {
         // Apply filters on original image only if adjustments are present
@@ -49,16 +51,49 @@ useEffect(() => {
         img.src = originalUrl;
 
         img.onload = () => {
+        // Use full image for processing
         canvas.width = img.width;
         canvas.height = img.height;
-        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) blur(${skinSmooth}px)`;
+
+        // Draw full image first (processing happens on the full image)
         ctx.drawImage(img, 0, 0);
+
+        // Apply filters to the full image
+        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) blur(${skinSmooth}px)`;
+
+        // Set the enhanced URL
         setEnhancedUrl(canvas.toDataURL());
         };
     }
     }
 }, [brightness, contrast, skinSmooth, currentImageIndex, images]);
 
+// Function to display the cropped view when rendering
+const renderWithCropApplied = () => {
+  const image = images[currentImageIndex];
+
+  if (!image || !enhancedUrl) return null;
+
+  // Create a modified image object with the enhanced URL but keeping the crop data
+  const enhancedImage = {
+    ...image,
+    url: enhancedUrl
+  };
+  
+  return (
+    <CropDisplay 
+      image={enhancedImage}
+      className="enhanced-image"
+      style={{ 
+        objectFit: 'contain', 
+        maxWidth: '100%', 
+        maxHeight: '500px',
+        margin: '0 auto',
+        display: 'block'
+      }}
+    />
+  );
+};
 
 const saveEnhancements = () => {
     const updatedImages = images.map((img, index) =>
@@ -93,14 +128,7 @@ return (
 
         <div className="image-preview-section">
         <h3>Enhanced Preview</h3>
-        {enhancedUrl && (
-            <img
-            src={enhancedUrl}
-            alt="Enhanced Preview"
-            onMouseEnter={(e) => (e.currentTarget.src = images[currentImageIndex].originalUrl || images[currentImageIndex].url)}
-            onMouseLeave={(e) => (e.currentTarget.src = enhancedUrl)}
-            />
-        )}
+        {enhancedUrl && renderWithCropApplied()}
         </div>
     </div>
 

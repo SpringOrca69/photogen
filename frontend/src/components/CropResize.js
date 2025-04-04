@@ -3,12 +3,19 @@ import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import './CropResize.css';
 import ImageGallery from './ImageGallery';
+import CropDisplay from './shared/CropDisplay';
 
 function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex }) {
   const [isCropMode, setIsCropMode] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(null);
   const cropperRef = useRef(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+
+  // Store the last crop data for each image
+  const [lastCropData, setLastCropData] = useState({});
+  
+  // Store current state of the image for display on the left
+  const [currentImageState, setCurrentImageState] = useState(null);
 
   // Split aspect ratio options into two groups for two rows
   const aspectRatioOptionsRow1 = [
@@ -31,9 +38,17 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   ];
 
   const handleStartCrop = () => {
+    // Store the current state of the image before starting crop mode
+    setCurrentImageState({...images[currentImageIndex]});
     setIsCropMode(true);
-    // Always set default to passport size
-    setAspectRatio(35/45);
+    
+    // Set aspect ratio based on previous crop or default to passport size
+    const currentImage = images[currentImageIndex];
+    if (currentImage.cropData && currentImage.cropData.aspectRatio) {
+      setAspectRatio(currentImage.cropData.aspectRatio);
+    } else {
+      setAspectRatio(35/45); // Default to passport size
+    }
   };
 
   const handleAutoDetect = async () => {
@@ -176,7 +191,6 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
       if (ratio === null) {
         cropper.setDragMode('crop');
       }
-      // Removed image creation code - this now only happens in handleSaveCrop
     }
   };
 
@@ -188,21 +202,43 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   const handleSaveCrop = () => {
     const cropper = cropperRef.current?.cropper;
     if (cropper) {
-      const croppedCanvas = cropper.getCroppedCanvas();
-      const croppedImage = croppedCanvas.toDataURL();
-  
-      const newImage = {
-        url: croppedImage,
-        name: `${images[currentImageIndex].name}_cropped`,
-        originalIndex: currentImageIndex
+      // Get crop data in actual pixels
+      const cropData = cropper.getData(true);
+      
+      // Store this crop data for potential reuse
+      setLastCropData({
+        ...lastCropData,
+        [currentImageIndex]: {
+          x: cropData.x,
+          y: cropData.y,
+          width: cropData.width,
+          height: cropData.height,
+          aspectRatio: aspectRatio || NaN,
+          rotation: cropData.rotate || 0
+        }
+      });
+      
+      // Update the current image with crop dimensions
+      const updatedImages = [...images];
+      updatedImages[currentImageIndex] = {
+        ...updatedImages[currentImageIndex],
+        cropData: {
+          x: cropData.x,
+          y: cropData.y,
+          width: cropData.width,
+          height: cropData.height,
+          aspectRatio: aspectRatio || NaN,
+          rotation: cropData.rotate || 0
+        },
+        // Store original dimensions for reference
+        originalWidth: cropper.getImageData().naturalWidth,
+        originalHeight: cropper.getImageData().naturalHeight
       };
-  
-      // Add the cropped image to the array instead of replacing the current one
-      const updatedImages = [...images, newImage];
+      
+      // Update images without creating a duplicate
       setImages(updatedImages);
-      setCurrentImageIndex(updatedImages.length - 1); // Select the new image
       sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
-  
+      
       setIsCropMode(false);
       setAspectRatio(null);
     }
@@ -219,18 +255,76 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     window.location.href = '#background-remover';
   };
 
+  // Initialize currentImageState when component mounts or currentImageIndex changes
+  useEffect(() => {
+    if (images[currentImageIndex]) {
+      setCurrentImageState({...images[currentImageIndex]});
+    }
+  }, [images, currentImageIndex]);
+
+  // Function to render the current state of the image
+  const renderCurrentImageState = () => {
+    if (!currentImageState) return null;
+
+    return (
+      <div className="original-image-container">
+        <CropDisplay 
+          image={currentImageState}
+          style={{ 
+            maxWidth: '100%', 
+            maxHeight: '480px',  // Consistent with preview height
+            objectFit: 'contain' 
+          }}
+        />
+      </div>
+    );
+  };
+
+  // Function to render the cropped view of an image
+  const renderCroppedImage = (imageData) => {
+    if (!imageData) return null;
+    
+    if (!imageData.cropData) {
+      return (
+        <img 
+          src={imageData.url} 
+          alt="Preview" 
+          style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain' }}
+        />
+      );
+    }
+    
+    return (
+      <CropDisplay 
+        image={imageData}
+        style={{ maxWidth: '100%', maxHeight: '480px', objectFit: 'contain' }}
+      />
+    );
+  };
+
   return (
     <div className="crop-resize-wrapper">
-      <div className="crop-resize-container">
-        <section className="editor-section">
-          <h2 className="section-title">Image Editor</h2>
-          <div className="cropper-container">
+      <h2 className="section-title">Image Editor</h2>
+      
+      <div className="crop-resize-container wide-layout">
+        {/* Left side - Current state of the image */}
+        <div className="original-image-section">
+          <h3>Current Photo</h3>
+          {renderCurrentImageState()}
+          {/* Adding an empty controls div for consistent spacing */}
+          <div className="controls"></div>
+        </div>
+        
+        {/* Right side - Editing Area */}
+        <div className="editing-section">
+          <h3>Editing Preview</h3>
+          <div className={isCropMode ? "cropper-container" : "preview-container"}>
             {images.length > 0 && (
               isCropMode ? (
                 <Cropper
                   ref={cropperRef}
                   src={images[currentImageIndex].url}
-                  style={{ height: 500, width: '100%' }}
+                  style={{ height: 480, width: '100%' }} /* Match height with preview */
                   aspectRatio={aspectRatio}
                   guides={true}
                   viewMode={2}
@@ -246,18 +340,34 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
                   ready={() => {
                     const cropper = cropperRef.current?.cropper;
                     if (cropper) {
-                      cropper.setAspectRatio(aspectRatio || 35/45); // Default to passport size
+                      cropper.setAspectRatio(aspectRatio || 35/45);
+                      
+                      // If image already has crop data, apply it
+                      const currentImage = images[currentImageIndex];
+                      if (currentImage.cropData) {
+                        cropper.setData({
+                          x: currentImage.cropData.x,
+                          y: currentImage.cropData.y,
+                          width: currentImage.cropData.width,
+                          height: currentImage.cropData.height,
+                          rotate: currentImage.cropData.rotation || 0
+                        });
+                      }
+                      // If no crop data but we have last crop data, apply that
+                      else if (lastCropData[currentImageIndex]) {
+                        cropper.setData({
+                          x: lastCropData[currentImageIndex].x,
+                          y: lastCropData[currentImageIndex].y,
+                          width: lastCropData[currentImageIndex].width,
+                          height: lastCropData[currentImageIndex].height,
+                          rotate: lastCropData[currentImageIndex].rotation || 0
+                        });
+                      }
                     }
                   }}
                 />
               ) : (
-                <div className="preview-container">
-                  <img 
-                    src={images[currentImageIndex].url} 
-                    alt="Preview" 
-                    style={{ maxWidth: '100%', maxHeight: '500px' }}
-                  />
-                </div>
+                renderCroppedImage(images[currentImageIndex])
               )
             )}
           </div>
@@ -313,20 +423,23 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
               </div>
             )}
           </div>
-        </section>
-
+        </div>
+      </div>
+      
+      {/* Image Gallery Below */}
+      <div className="gallery-section">
         <ImageGallery 
           images={images} 
           currentImageIndex={currentImageIndex} 
           isEditMode={isCropMode} 
           handleThumbnailClick={handleThumbnailClick} 
         />
+      </div>
 
-        <div className="continue-button-container">
-          <button className="continue-button" onClick={handleContinue}>
-            Continue to Background Remover
-          </button>
-        </div>
+      <div className="continue-button-container">
+        <button className="continue-button" onClick={handleContinue}>
+          Continue to Background Remover
+        </button>
       </div>
     </div>
   );

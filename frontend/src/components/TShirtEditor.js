@@ -3,6 +3,8 @@ import './TShirtEditor.css';
 import formal1 from './images/formal1.png';
 import formal2 from './images/formal2.png';
 import formal3 from './images/formal3.png';
+import ImageGallery from './ImageGallery';
+import CropDisplay from './shared/CropDisplay';
 
 const clothingImages = [formal1, formal2, formal3]; // Array of clothing images
 
@@ -112,23 +114,123 @@ function TShirtEditor({ onNext, onBack }) {
     console.log(`Selected clothing option: ${clothingImages[index]}`);
   };
 
+  // Function to render the cropped image
+  const renderCroppedImage = (imageData) => {
+    if (!imageData) return null;
+    
+    return (
+      <CropDisplay 
+        image={imageData}
+        className="tshirt-image"
+        style={{ maxWidth: '100%', maxHeight: '400px' }}
+      />
+    );
+  };
+
+  const applyShirtOverlay = (userImg, shirtImg, cropData) => {
+    // Create a canvas to composite the images
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas dimensions based on the shirt image
+    canvas.width = shirtImg.width;
+    canvas.height = shirtImg.height;
+    
+    // Position for user image on shirt (adjust these values as needed)
+    const shirtPositionX = canvas.width * 0.3; // 30% from left
+    const shirtPositionY = canvas.height * 0.2; // 20% from top
+    const userImageWidth = canvas.width * 0.4; // 40% of shirt width
+    const userImageHeight = canvas.height * 0.3; // 30% of shirt height
+    
+    // Draw the shirt image first
+    ctx.drawImage(shirtImg, 0, 0, canvas.width, canvas.height);
+    
+    // Draw the user image on top, applying crop if present
+    if (cropData) {
+      // Use the exact crop coordinates when drawing
+      ctx.drawImage(
+        userImg,
+        cropData.x,
+        cropData.y,
+        cropData.width,
+        cropData.height,
+        shirtPositionX,
+        shirtPositionY,
+        userImageWidth,
+        userImageHeight
+      );
+    } else {
+      // Draw the entire user image
+      ctx.drawImage(
+        userImg, 
+        shirtPositionX, 
+        shirtPositionY, 
+        userImageWidth, 
+        userImageHeight
+      );
+    }
+    
+    return canvas.toDataURL('image/png');
+  };
+
+  const handleApplyShirt = async () => {
+    if (selectedClothingIndex === null || images.length === 0) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      // Load user image
+      const userImage = new Image();
+      userImage.crossOrigin = "anonymous";
+      await new Promise((resolve, reject) => {
+        userImage.onload = resolve;
+        userImage.onerror = reject;
+        userImage.src = images[currentImageIndex].url;
+      });
+      
+      // Load clothing/shirt image
+      const shirtImage = new Image();
+      shirtImage.crossOrigin = "anonymous";
+      await new Promise((resolve, reject) => {
+        shirtImage.onload = resolve;
+        shirtImage.onerror = reject;
+        shirtImage.src = clothingImages[selectedClothingIndex];
+      });
+      
+      // Apply the overlay
+      const currentImage = images[currentImageIndex];
+      const compositeImageUrl = applyShirtOverlay(
+        userImage,
+        shirtImage,
+        currentImage.cropData
+      );
+      
+      // Set the result
+      setProcessedImage(compositeImageUrl);
+    } catch (error) {
+      console.error("Error applying shirt overlay:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
-    <div className="background-remover-container">
+    <div className="tshirt-editor-container">
       <h2>T-Shirt Editor</h2>
-      <div className="thumbnails">
-      {images.map((image, index) => (
-        <div
-          key={index}
-          className={`thumbnail-card ${index === currentImageIndex ? 'active' : ''}`}
-          onClick={() => handleThumbnailClick(index)}
-        >
-          <img
-            src={image.url}
-            alt={`Thumbnail ${index}`}
-          />
+
+      {/* Show only the preview area with the current image */}
+      <div className="editor-area">
+        <div className="image-preview">
+          {images.length > 0 && 
+            <CropDisplay 
+              image={images[currentImageIndex]}
+              className="tshirt-image"
+              style={{ maxWidth: '100%', maxHeight: '400px' }}
+            />
+          }
         </div>
-      ))}
-    </div>
+      </div>
+
       <div>
         <h3>Select Clothing Options</h3>
         <div className="clothing-options">
@@ -143,14 +245,16 @@ function TShirtEditor({ onNext, onBack }) {
           ))}
         </div>
       </div>
+
       <div className="controls">
         <button 
-          onClick={handleClothesReplacement}
+          onClick={handleApplyShirt}
           disabled={isProcessing || images.length === 0 || selectedClothingIndex === null}
         >
-          {isProcessing ? 'Processing...' : 'Process Image'}
+          {isProcessing ? 'Processing...' : 'Apply Selected Shirt'}
         </button>
       </div>
+
       {processedImage && (
         <div className="processed-image-container">
           <h3>Processed Image</h3>
@@ -163,6 +267,15 @@ function TShirtEditor({ onNext, onBack }) {
           </button>
         </div>
       )}
+
+      {/* Image Gallery at the bottom */}
+      <ImageGallery
+        images={images}
+        currentImageIndex={currentImageIndex}
+        isEditMode={false}
+        handleThumbnailClick={(index) => setCurrentImageIndex(index)}
+      />
+
       <div className="navigation">
         <button onClick={onBack}>Back</button>
         <button onClick={onNext}>Next</button>

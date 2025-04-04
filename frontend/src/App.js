@@ -8,6 +8,7 @@ import TShirtEditor from './components/TShirtEditor';
 import Export from './components/Export';
 import PhotoEnhancement from './components/PhotoEnhancement';
 import PhotoStrip from './components/photostrip';
+import './components/shared/CropDisplay'; // Make sure the shared component is imported
 
 function App() {
   const [activeComponent, setActiveComponent] = useState('Welcome');

@@ -1,5 +1,15 @@
 .thumbnails-section {
-  padding: 20px;
+  position: fixed; /* Fix to viewport */
+  bottom: 0; /* Stick to bottom */
+  left: 250px; /* Align with sidebar width */
+  width: calc(100% - 250px); /* Take up remaining width */
+  background-color: white;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1); /* Slightly stronger shadow */
+  z-index: 90;
+  padding: 15px 0 20px; /* Increased padding top and bottom */
+  box-sizing: border-box;
+  border-top: 1px solid #eaeaea; /* Add subtle border */
+  margin-top: 20px; /* Add margin to separate from content above */
 }
 
 .thumbnails-section.disabled {
@@ -8,50 +18,124 @@
 }
 
 .section-title {
-  font-size: 24px;
-  margin-bottom: 20px;
+  font-size: 18px;
+  margin: 0 20px 15px; /* Increased bottom margin */
+  color: #333;
+  font-weight: 600;
 }
 
+/* Simplified horizontal scrolling container */
 .thumbnails-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  overflow-x: scroll; /* Force horizontal scrolling */
+  overflow-y: hidden; /* Prevent vertical scrolling */
+  width: 100%;
+  gap: 20px; /* Increased gap between thumbnails */
+  padding: 5px 20px 15px; /* Added top padding */
+  height: 210px; /* Slightly increased height */
+  scrollbar-width: thin;
 }
 
+/* Standard scrollbar styling */
+.thumbnails-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.thumbnails-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.thumbnails-grid::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.thumbnails-grid::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Simplified card styling */
 .thumbnail-card {
-  border: 2px solid transparent;
+  flex: 0 0 auto; /* Don't grow or shrink */
+  width: 150px;
+  height: 180px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+  background: white;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
-  transition: border-color 0.3s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .thumbnail-card.active {
-  border-color: #007bff;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+}
+
+.thumbnail-card.selected {
+  background-color: #ebf5ff;
+}
+
+.thumbnail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  z-index: 1; /* Ensure hovered card appears above others */
+}
+
+.thumbnail-wrapper {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f9f9f9;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.thumbnail-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
 }
 
 .thumbnail-image img {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .thumbnail-info {
-  text-align: center;
-  margin-top: 5px;
+  margin-top: 8px;
+  text-align: left; /* Align text to the left */
+  width: 100%;
 }
 
 .thumbnail-name {
+  font-size: 0.8rem;
   display: block;
-  font-size: 14px;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #333;
+  text-align: left; /* Ensure text aligns left */
 }
 
 .thumbnail-badge {
-  display: inline-block;
-  background-color: #ff5722;
+  background: #4285f4;
   color: white;
-  padding: 2px 5px;
-  font-size: 12px;
-  border-radius: 3px;
-  margin-top: 5px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  margin-top: 4px;
+  display: inline-block;
 }
 
 .thumbnail-card:not(.active):hover {
@@ -60,5 +144,47 @@
 
 .thumbnail-card.active:hover {
   border-color: #007bff;
-  box-shadow: 0 20px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Reduced shadow size */
+  /* Remove the extreme shadow that might cause overflow */
+}
+
+/* Adjust page content to make room for fixed gallery */
+body {
+  padding-bottom: 260px; /* Increased padding to make more room */
+}
+
+/* Simple responsive adjustments */
+@media (max-width: 768px) {
+  .thumbnail-card {
+    width: 120px;
+    height: 160px;
+  }
+  
+  .thumbnail-wrapper {
+    height: 100px;
+  }
+  
+  body {
+    padding-bottom: 220px; /* Adjusted for medium screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .thumbnail-card {
+    width: 100px;
+    height: 140px;
+  }
+  
+  .thumbnail-wrapper {
+    height: 80px;
+  }
+  
+  .thumbnails-grid {
+    gap: 10px;
+    height: 170px;
+  }
+  
+  body {
+    padding-bottom: 190px; /* Adjusted for small screens */
+  }
 }

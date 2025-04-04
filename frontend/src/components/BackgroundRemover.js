@@ -4,15 +4,12 @@ import './BackgroundRemover.css';
 import formal1 from './images/formal1.png';
 import formal2 from './images/formal2.png';
 import formal3 from './images/formal3.png';
+import ImageGallery from './ImageGallery';
+import CropDisplay from './shared/CropDisplay';
 
 const clothingImages = [formal1, formal2, formal3]; // Array of clothing images
 
-function BackgroundRemover({ onNext, onBack }) {
-  const [images, setImages] = useState(() => {
-    const savedImages = sessionStorage.getItem('uploadedImages');
-    return savedImages ? JSON.parse(savedImages) : [];
-  });
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+function BackgroundRemover({ images, setImages, currentImageIndex, setCurrentImageIndex, onNext, onBack }) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [backgroundColour, setBackgroundColour] = useState('#FFFFFF');
   const [customBackground, setCustomBackground] = useState(null);
@@ -48,22 +45,26 @@ function BackgroundRemover({ onNext, onBack }) {
     }
   };
 
-  const saveProcessedImage = () => {
-    if (processedImage) { 
-      const newImage = {
-        url: processedImage,
-        name: `${images[currentImageIndex].name}_processed`,
-        originalIndex: currentImageIndex
+  // Add helper function to get image data respecting crop
+  const getImageData = (imageObj) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas with original dimensions for processing
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Draw the full image for processing
+        ctx.drawImage(img, 0, 0);
+        
+        // Return the full image data
+        resolve(canvas.toDataURL());
       };
-  
-      const updatedImages = [...images, newImage];
-      setImages(updatedImages);
-      setCurrentImageIndex(updatedImages.indexOf(newImage));
-      sessionStorage.setItem('uploadedImages', JSON.stringify(updatedImages));
-      setIsImageSaved(true);
-    } else {
-      console.error("No processed image to save.");
-    }
+      img.src = imageObj.url;
+    });
   };
 
   async function imageUrlToDataUrl(url) {
@@ -128,25 +129,75 @@ function BackgroundRemover({ onNext, onBack }) {
     console.log(`Selected clothing option: ${clothingImages[index]}`);
   };
 
+  // Helper function to render image with crop applied
+  const renderCroppedImage = (imageData) => {
+    if (!imageData) return null;
+    
+    return (
+      <CropDisplay 
+        image={imageData}
+        className="preview-image"
+        style={{ maxWidth: '100%', maxHeight: '400px' }}
+      />
+    );
+  };
+
+  // When displaying the processed image
+  const renderProcessedImage = () => {
+    if (!processedImage) return null;
+    
+    // Just show the processed image as is
+    return (
+      <img 
+        src={processedImage} 
+        alt="Processed"
+        style={{ maxWidth: '100%', maxHeight: '400px' }}
+      />
+    );
+  };
+
+  // When saving the processed image
+  const saveProcessedImage = async () => {
+    // Get the original image data with crop dimensions preserved
+    const image = images[currentImageIndex];
+    
+    // Create a new image object with all the same properties
+    const newImage = {
+      ...image,
+      url: processedImage,
+      // Preserve the crop data from the original image
+      cropData: image.cropData,
+      originalWidth: image.originalWidth,
+      originalHeight: image.originalHeight,
+      // Additional metadata as needed
+      backgroundRemoved: true
+    };
+    
+    // Add to images array
+    const updatedImages = [...images, newImage];
+    setImages(updatedImages);
+    setCurrentImageIndex(updatedImages.length - 1);
+    
+    // Reset processing state
+    setIsProcessing(false);
+    setProcessedImage(null);
+  };
+
   return (
     <div className="background-remover-container">
       <h2>Background Remover</h2>
       <div className="image-preview">
-        {images.length > 0 && (
-          <img src={images[currentImageIndex].url} alt="Current" />
-        )}
+        {images.length > 0 && renderCroppedImage(images[currentImageIndex])}
       </div>
-      <div className="thumbnails">
-        {images.map((image, index) => (
-          <img
-            key={index}
-            src={image.url}
-            alt={`Thumbnail ${index}`}
-            onClick={() => handleThumbnailClick(index)}
-            className={index === currentImageIndex ? 'active' : ''}
-          />
-        ))}
-      </div>
+      
+      {/* Replace the thumbnails section with ImageGallery component */}
+      <ImageGallery
+        images={images}
+        currentImageIndex={currentImageIndex}
+        isEditMode={false}
+        handleThumbnailClick={handleThumbnailClick}
+      />
+      
       <div className="background-options">
         <h3>Background Options</h3>
         <div className="color-picker">
@@ -179,7 +230,7 @@ function BackgroundRemover({ onNext, onBack }) {
       {processedImage && (
         <div className="processed-image-container">
           <h3>Processed Image</h3>
-          <img src={processedImage} alt="Processed" />
+          {renderProcessedImage()}
           <button onClick={resetProcessedImage} className="control-button secondary">
             Reset Image
           </button>
