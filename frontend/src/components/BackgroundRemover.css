@@ -1,7 +1,126 @@
+.background-remover-wrapper {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 2rem;
+}
+
 .background-remover-container {
-    min-height: 100vh;
+    max-width: 1400px;
     background-color: #f8f9fa;
-    padding: 2rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Background Options Section */
+.background-options {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f9f9f9; /* Light background for contrast */
+  border-radius: 8px; /* Rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+/* Section Title */
+.background-options .section-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #333; /* Darker text for better readability */
+}
+
+/* Labels for Color Picker and Custom Background */
+.color-picker-label,
+.custom-background-label {
+  display: block;
+  font-size: 14px; /* Slightly smaller font size */
+  font-weight: 500; /* Medium weight for subtle emphasis */
+  margin-bottom: 8px;
+  color: #555; /* Muted text color for a softer look */
+}
+
+/* Section Divider */
+.section-divider {
+  margin: 20px 0;
+  border-top: 1px solid #ddd; /* Subtle divider line */
+}
+
+/* Custom Background Input */
+.custom-background-input {
+  display: block;
+  width: 98%; /* Full width for better alignment */
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+.custom-background-input:hover {
+  border-color: #007bff; /* Highlight border on hover */
+}
+
+.custom-background-input:focus {
+  outline: none;
+  border-color: #007bff; /* Highlight border on focus */
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.5); /* Add focus shadow */
+}
+
+.button-group {
+  display: flex; /* Use flexbox to align buttons side by side */
+  gap: 10px; /* Add spacing between the buttons */
+  justify-content: center; /* Center the buttons horizontally */
+  margin-top: 10px; /* Add some spacing above the buttons */
+}
+
+.background-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+  min-width: 180px;
+  margin: 20px 0;
+}
+
+.background-control-button {
+  width: 180px; /* Increase the width to make the button longer */
+  height: 60px; /* Keep the height consistent */
+  font-size: 16px; /* Keep the font size readable */
+  font-weight: 700; /* Make the text bolder */
+  padding: 0; /* Keep padding at 0 to rely on width/height */
+  line-height: 60px; /* Match the height to vertically center text */
+  text-align: center; /* Center text horizontally */
+  border-radius: 6px; /* Add slightly rounded corners for a modern look */
+  transition: all 0.3s ease; /* Smooth transition for hover effects */
+  background-color: #4caf50; /* Light background for contrast */
+}
+
+.background-control-button:hover {
+  background-color: #56cd5a; /* Add a subtle hover effect */
+  transform: translateY(-2px); /* Slight lift on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add a shadow for depth */
+}
+
+.background-control-button.secondary {
+  background-color: #827d7d; /* Example styling for secondary button */
+  border: 1px solid #ccc;
+}
+
+.background-control-button.primary {
+  background-color: #4caf50; /* Example styling for primary button */
+  color: white;
+  border: none;
+}
+
+.background-control-button.primary:hover {
+  background-color: #56cd5a; /* Example styling for primary button hover */
+}
+
+.background-control-button.secondary:hover {
+  background-color: #ada9a9; /* Example styling for secondary button hover */
 }
 
 .clothing-options {
@@ -40,3 +159,63 @@
   border-color: #28a745; /* Change to your desired selected color */
 }
 
+.process-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 500px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.navigation {
+  display: flex; /* Use flexbox to align buttons horizontally */
+  justify-content: center; /* Center the buttons horizontally */
+  gap: 10px; /* Add spacing between the buttons */
+  margin-top: 20px; /* Add some spacing above the navigation section */
+}
+
+.navigation-button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px; /* Adjust font size for readability */
+  border: none; /* Remove default border */
+  border-radius: 4px; /* Add rounded corners */
+  cursor: pointer; /* Change cursor to pointer on hover */
+  background-color: #4caf50; /* Button background color */
+  color: white; /* Button text color */
+  transition: background-color 0.3s ease; /* Smooth hover effect */
+}
+
+.color-picker-and-toggle {
+  display: flex;
+  align-items: center; /* Align items vertically in the center */
+  gap: 20px; /* Add space between the color picker and the toggle */
+}
+
+.color-picker {
+  flex: 1;
+  flex-direction: column; /* Stack the label and color picker vertically */
+  gap: 5px; 
+}
+
+.formal-clothes-toggle {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center; /* Align the checkbox and label text vertically */
+  gap: 10px; /* Add space between the checkbox and the label text */
+  font-size: 16px;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}

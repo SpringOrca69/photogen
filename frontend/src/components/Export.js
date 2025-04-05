@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './Export.css';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -7,13 +7,19 @@ import ExportContainer from './ExportContainer';
 
 const Export = ({ images, currentImageIndex }) => {
 const [selectedIndices, setSelectedIndices] = useState([]);
+const [errors, setErrors] = useState({});
 
 const exportRefs = useRef({});
+
+useEffect(() => {
+    window.scrollTo(0, 0);
+}, []);
 
 const toggleImageSelection = (index) => {
     setSelectedIndices((prev) =>
     prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
+    complianceCheck(index);
 };
 
 const handleExportZip = async (exportAll = false) => {
@@ -36,6 +42,55 @@ const handleExportZip = async (exportAll = false) => {
     saveAs(content, exportAll ? 'All_PhotoGen_Images.zip' : 'Selected_PhotoGen_Images.zip');
     });
 };
+
+const complianceCheck = async (index) => {
+    
+    const imageDataUrl = await imageUrlToDataUrl(images[index].url);
+    
+    const response = await fetch('/api/compliance-checker/checks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            image: imageDataUrl
+        }),
+    });
+  
+    if (!response.ok) {
+        throw new Error('Compliance check failed');
+    }
+  
+    const result = await response.json();
+
+    if (!result.compliant){
+        setErrors((prevErrors) => ({ ...prevErrors, [index]: result.errors }));
+    }
+};
+
+const isDataUrl = (url) => {
+    return url.startsWith('data:');
+};
+
+async function imageUrlToDataUrl(url) {
+    if (isDataUrl(url)) return url;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        }
+        const blob = await response.blob();
+  
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+    } catch (error) {
+        console.error("Error converting imageUrl to dataUrl:", error);
+    }
+}
 
 return (
     <>
@@ -60,6 +115,7 @@ return (
             key={index}
             ref={(el) => (exportRefs.current[index] = el)}
             image={images[index]}
+            errors={errors[index] || []}
         />
         ))}
     </div>

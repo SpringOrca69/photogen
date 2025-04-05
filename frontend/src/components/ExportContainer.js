@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import './Export.css';
 
-const ExportContainer = forwardRef(({ image }, ref) => {
+const ExportContainer = forwardRef(({ image, errors }, ref) => {
     const [filename, setFilename] = useState('');
     const [format, setFormat] = useState('jpeg');
     const [scale, setScale] = useState(100);
@@ -93,6 +93,16 @@ const ExportContainer = forwardRef(({ image }, ref) => {
                     <div className="export-preview">
                         <h3>Preview</h3>
                         <img src={image.url} alt="Exported preview" className="exported-image" />
+                        {errors && errors.length > 0 && (
+                        <div className="compliance-errors">
+                            <h3>Warning! This image does not meet the following standard ID-Photo guidelines:</h3>
+                            <ul>
+                                {errors.map((error, i) => (
+                                    <li key={i}>{error}</li>
+                                ))}
+                            </ul>
+                        </div>
+                        )}
                     </div>
                 </div>
 

@@ -3,6 +3,7 @@ package com.example.photogen.controller;
 import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -37,6 +38,7 @@ public class BackgroundRemovalController {
     public ResponseEntity<?> removeBackground(@RequestBody Map<String, String> payload) {
         try {
             String backgroundColour = payload.get("backgroundColour");
+            Boolean isFormalClothesEnabled = Boolean.parseBoolean(payload.get("isFormalClothesEnabled"));
 
             String imageData = payload.get("image").split(",")[1];
             byte[] inputImageBytes = java.util.Base64.getDecoder().decode(imageData);
@@ -51,11 +53,11 @@ public class BackgroundRemovalController {
                 customBackground = null;
             }
 
-            String dataUrl = processUserDrawing(inputImage, customBackground, backgroundColour);
+            String dataUrl = processUserDrawing(inputImage, customBackground, backgroundColour, isFormalClothesEnabled);
 
             return ResponseEntity.ok(Map.of(
-                    "processedImageDataUrl", dataUrl, // Return the data URL
-                    "message", "Background removed successfully"
+                "processedImageDataUrl", dataUrl,
+                "message", "Background removed successfully"
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Face detection failed: " + e.getMessage()));
@@ -64,7 +66,7 @@ public class BackgroundRemovalController {
         }
     }
 
-    private String processUserDrawing(Mat drawnImage, Mat customBackground, String backgroundColour) {
+    private String processUserDrawing(Mat drawnImage, Mat customBackground, String backgroundColour, Boolean isFormalClothesEnabled) {
         if (drawnImage.empty()) {
             throw new IllegalArgumentException("Empty image");
         }
@@ -111,29 +113,32 @@ public class BackgroundRemovalController {
         
         if (faceRect.height < 0.6 * drawnImage.height()) {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 2.4, 1.3);
-            Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
-            Mat clothesImage = drawnImage.clone();
-            Mat clothesImageClone = clothesImage.clone();
             
             Mat faceForegroundMask = grabCut(faceImage, expandedFaceRect);
             faceImageClone.copyTo(result, faceForegroundMask);
-            
-            //Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
-            //clothesImageClone.copyTo(result, clothesForegroundMask);
 
-            Mat formalImageResized = resizeImage(formalImage, drawnImage.width(), drawnImage.height());
-            Mat formalImageClone = formalImageResized.clone();
-            Rect formalClothesRect = new Rect(0, formalImageResized.height() / 2, formalImageResized.width(), formalImageResized.height() / 2);
-            Mat formalForegroundMask = grabCut(formalImageResized, formalClothesRect);
+            if (isFormalClothesEnabled) {
+                Mat formalImageResized = resizeImage(formalImage, drawnImage.width(), drawnImage.height());
+                Mat formalImageClone = formalImageResized.clone();
+                Rect formalClothesRect = new Rect(0, formalImageResized.height() / 2, formalImageResized.width(), formalImageResized.height() / 2);
+                Mat formalForegroundMask = grabCut(formalImageResized, formalClothesRect);
 
-            ImmutablePair<Mat, Mat> stretchedAndCropped = stretchAndCropHorizontally(formalImageClone, formalForegroundMask, 1.5);
-            formalImageClone = stretchedAndCropped.getLeft();
-            formalForegroundMask = stretchedAndCropped.getRight();
+                ImmutablePair<Mat, Mat> stretchedAndCropped = stretchAndCropHorizontally(formalImageClone, formalForegroundMask, 1.5);
+                formalImageClone = stretchedAndCropped.getLeft();
+                formalForegroundMask = stretchedAndCropped.getRight();
 
-            double largestGap = findLargestGap(faceForegroundMask, formalForegroundMask) * 0.6;
-            Mat formalImageTranslated = shiftDown(formalImageClone, largestGap);
-            Mat formalForegroundMaskTranslated = shiftDown(formalForegroundMask, largestGap);
-            formalImageTranslated.copyTo(result, formalForegroundMaskTranslated);
+                double largestGap = findLargestGap(faceForegroundMask, formalForegroundMask) * 0.6;
+                Mat formalImageTranslated = shiftDown(formalImageClone, largestGap);
+                Mat formalForegroundMaskTranslated = shiftDown(formalForegroundMask, largestGap);
+                formalImageTranslated.copyTo(result, formalForegroundMaskTranslated);
+            } 
+            else {
+                Rect clothesRect = clothesRegion(faceRect, drawnImage.size());
+                Mat clothesImage = drawnImage.clone();
+                Mat clothesImageClone = clothesImage.clone();
+                Mat clothesForegroundMask = grabCut(clothesImage, clothesRect);
+                clothesImageClone.copyTo(result, clothesForegroundMask);
+            }
         } 
         else {
             Rect expandedFaceRect = expandFaceRegion(faceRect, drawnImage.size(), 1.7, 1.2);
@@ -222,8 +227,8 @@ public class BackgroundRemovalController {
 
         Core.bitwise_or(foregroundMask, fgdMask, foregroundMask);
 
-        int iterations = 3;
-        int size = 3;
+        int iterations = 2;
+        int size = 5;
         for (int i = 0; i < iterations; i++) {
             Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(size + i * 2, size + i * 2));
             Imgproc.morphologyEx(foregroundMask, foregroundMask, Imgproc.MORPH_CLOSE, kernel);

@@ -42,17 +42,3 @@
     width: 100%;
     border-radius: 5px;
 }
-
-.thumbnail-card {
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.thumbnail-card.active {
-    border: 2px solid #4CAF50;
-}
-
-.thumbnail-card:hover {
-    transform: scale(1.05);
-}
-  

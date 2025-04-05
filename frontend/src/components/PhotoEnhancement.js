@@ -13,6 +13,10 @@ const [sharpness, setSharpness] = useState(0);
 const [enhancedUrl, setEnhancedUrl] = useState('');
 const [saveStatus, setSaveStatus] = useState('idle');
 
+useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
 const updateCurrentImageSettings = () => {
     const updatedImages = [...images];
     updatedImages[currentImageIndex] = {

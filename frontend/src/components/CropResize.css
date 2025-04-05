@@ -66,75 +66,6 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.thumbnails-section {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-.thumbnails-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.thumbnail-card {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.thumbnail-card.active {
-  border-color: #4CAF50;
-  transform: scale(1.02);
-}
-
-.thumbnail-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.thumbnail-image {
-  aspect-ratio: 1;
-  overflow: hidden;
-}
-
-.thumbnail-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumbnail-info {
-  padding: 0.8rem;
-  background: #f8f9fa;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.thumbnail-name {
-  font-size: 0.9rem;
-  color: #495057;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.thumbnail-badge {
-  background: #4CAF50;
-  color: white;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
 @media (max-width: 768px) {
   .crop-resize-wrapper {
     padding: 1rem;
@@ -327,4 +258,63 @@
     font-size: 0.8rem;
     padding: 0.5rem 0.2rem;
   }
+}
+
+.manual-crop-controls {
+  display: flex; /* Use flexbox for layout */
+  gap: 60px; /* Add spacing between the input fields and button */
+  align-items: center; /* Vertically align items in the center */
+  justify-content: center; /* Horizontally center the entire row */
+  margin-top: 20px; /* Add spacing above the row */
+}
+
+.manual-crop-controls label {
+  font-size: 18px;
+  font-weight: 500;
+  color: #555;
+  margin-top: 10px;
+  /* You might need to adjust margin-top on the label if it's misaligned */
+}
+
+.manual-crop-input {
+  width: 120px;
+  height: 20px;
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-left: 5px;
+}
+
+.manual-crop-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
+}
+
+.apply-crop-button {
+  width: 150px;
+  height: auto; /* Let height adjust based on content and padding */
+  font-size: 16px;
+  font-weight: 600;
+  line-height: normal; /* Reset line-height */
+  padding: 8px 20px; /* Use padding to control vertical alignment */
+  border-radius: 8px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.apply-crop-button:hover {
+  background-color: #45a049; /* Slightly darker green on hover */
+  transform: translateY(-2px); /* Add a slight lift on hover */
+}
+
+.crop-divider {
+  width: 100%; /* Full width of the container */
+  height: 1px; /* Thin horizontal line */
+  background-color: #ddd; /* Light gray color for the divider */
+  margin: 20px 0; /* Add spacing above and below the divider */
 }

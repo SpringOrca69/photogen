@@ -4,7 +4,6 @@ import Upload from './components/Upload';
 import CropResize from './components/CropResize';
 import BackgroundRemover from './components/BackgroundRemover';
 import './App.css';
-import TShirtEditor from './components/TShirtEditor';
 import Export from './components/Export';
 import PhotoEnhancement from './components/PhotoEnhancement';
 import PhotoStrip from './components/photostrip';
@@ -71,13 +70,14 @@ function App() {
   const renderComponent = () => {
     switch (activeComponent) {
       case 'Upload':
-        return <Upload onNext={handleMenuItemClick} updateImages={updateImages} />;
+        return <Upload onNext={handleMenuItemClick} updateImages={updateImages} setCurrentImageIndex={setCurrentImageIndex} />;
       case 'Crop & Resize':
         return <CropResize 
           images={images} 
           setImages={updateImages} 
           currentImageIndex={currentImageIndex}
           setCurrentImageIndex={setCurrentImageIndex}
+          onNext={() => handleMenuItemClick('Background Remover')}
         />;
       case 'Background Remover':
         return <BackgroundRemover 
@@ -85,13 +85,8 @@ function App() {
           setImages={updateImages} 
           currentImageIndex={currentImageIndex}
           setCurrentImageIndex={setCurrentImageIndex}
-        />;
-      case 'T-Shirt Editor':
-        return <TShirtEditor 
-          images={images} 
-          setImages={updateImages} 
-          currentImageIndex={currentImageIndex}
-          setCurrentImageIndex={setCurrentImageIndex}
+          onNext={() => handleMenuItemClick('Photo Enhancement')}
+          onBack={() => handleMenuItemClick('Crop & Resize')}
         />;
       case 'Photo Enhancement':
         return <PhotoEnhancement 

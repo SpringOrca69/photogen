@@ -4,11 +4,13 @@ import 'cropperjs/dist/cropper.css';
 import './CropResize.css';
 import ImageGallery from './ImageGallery';
 
-function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex }) {
+function CropResize({ images, setImages, currentImageIndex= images.length - 1, setCurrentImageIndex, onNext }) {
   const [isCropMode, setIsCropMode] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(null);
   const cropperRef = useRef(null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+  const [manualWidth, setManualWidth] = useState('');
+  const [manualHeight, setManualHeight] = useState('');
 
   // Split aspect ratio options into two groups for two rows
   const aspectRatioOptionsRow1 = [
@@ -180,6 +182,25 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
     }
   };
 
+  const handleApplyManualCrop = () => {
+    const cropper = cropperRef.current?.cropper;
+  
+    if (cropper && manualWidth && manualHeight) {
+      const canvasData = cropper.getCanvasData();
+  
+      // Calculate the crop box dimensions and position
+      const cropBoxData = {
+        left: canvasData.left + (canvasData.width - manualWidth) / 2,
+        top: canvasData.top + (canvasData.height - manualHeight) / 2,
+        width: parseFloat(manualWidth),
+        height: parseFloat(manualHeight),
+      };
+  
+      // Apply the crop box dimensions
+      cropper.setCropBoxData(cropBoxData);
+    }
+  };
+
   const handleCancelCrop = () => {
     setIsCropMode(false);
     setAspectRatio(null);
@@ -215,8 +236,9 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
   };
 
   const handleContinue = () => {
-    // Navigate to next component
-    window.location.href = '#background-remover';
+    if (onNext) {
+      onNext(); // Call the onNext function passed from App.js
+    }
   };
 
   return (
@@ -302,6 +324,35 @@ function CropResize({ images, setImages, currentImageIndex, setCurrentImageIndex
                     ))}
                   </div>
                 </div>
+                <div className="manual-crop-controls">
+                  <label>
+                    Width (px):
+                    <input
+                      type="number"
+                      value={manualWidth}
+                      onChange={(e) => setManualWidth(e.target.value)}
+                      className="manual-crop-input"
+                    />
+                  </label>
+                  <label>
+                    Height (px):
+                    <input
+                      type="number"
+                      value={manualHeight}
+                      onChange={(e) => setManualHeight(e.target.value)}
+                      className="manual-crop-input"
+                    />
+                  </label>
+                  <button
+                    onClick={() => handleApplyManualCrop()}
+                    className="apply-crop-button"
+                  >
+                    Apply Crop
+                  </button>
+                </div>
+
+                <div className="crop-divider"></div>
+                
                 <div className="crop-actions">
                   <button onClick={handleCancelCrop} className="control-button secondary">
                     Cancel

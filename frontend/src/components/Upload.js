@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Upload.css';
 
-function Upload({ onNext, updateImages }) {
+function Upload({ onNext, updateImages, setCurrentImageIndex }) {
   const [files, setFiles] = useState([]);
   const [toBeUploaded, setToBeUploaded] = useState([]);
 
@@ -118,6 +118,7 @@ function Upload({ onNext, updateImages }) {
     setToBeUploaded([]);
     setFiles([]);
     sessionStorage.removeItem('toBeUploaded');
+    setCurrentImageIndex(updatedImages.length - 1);
     onNext('Crop & Resize');
   };
 

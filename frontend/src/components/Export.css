@@ -190,6 +190,34 @@ button:hover {
     cursor: not-allowed;
 }
 
+.compliance-errors {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 6px;
+    color: #856404;
+    font-size: 16px; /* Increase the base font size */
+    line-height: 1.8; /* Adjust line height for better readability */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: center; /* Center-align the content */
+}
 
+.compliance-errors h3 {
+    margin: 0 0 15px; /* Add more spacing below the heading */
+    font-size: 17px; /* Increase the heading font size */
+    font-weight: bold;
+}
 
+.compliance-errors ul {
+    margin: 0 auto; /* Center the list */
+    padding: 0; /* Remove default padding */
+    list-style-type: disc; /* Keep bullet points */
+    text-align: left; /* Align the list items to the left */
+    display: inline-block; /* Ensure the list is treated as a block for centering */
+}
 
+.compliance-errors li {
+    margin-bottom: 8px; /* Add more spacing between list items */
+    font-size: 16px; /* Increase the font size of list items */
+}
