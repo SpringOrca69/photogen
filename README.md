@@ -1,39 +1,81 @@
-# PhotoGen
+# Photogen
 
-PhotoGen is an application for photo editing and enhancement.
+This project is a web application built with React for the frontend and Spring Boot for the backend. It allows users to upload images, crop and resize them, remove and replace backgrounds, and edit T-shirts.
 
-## Setup
+## Project Structure
 
-To get started, install the project dependencies by running:
+The project is divided into two main parts:
 
-```bash
-npm install
-```
+- `frontend`: Contains the React application.
+- `backend`: Contains the Spring Boot application.
 
-## Additional Dependencies
+## Prerequisites
 
-This project uses **react-card-flip** for smooth card-flip animations in the welcome screen. To install it, run:
+Before running the application, make sure you have the following installed:
 
-```bash
-npm install react-card-flip
-```
+### For Backend
+- Java JDK 21 or later
+- Maven 3.9+ 
 
-## Usage
+### For Frontend
+- Node.js 16.x or later
+- npm 8.x or later
 
-After installing dependencies, start the development server with:
+## Installation
 
-```bash
-npm start
-```
+### Installing Java
+1. Download and install Java JDK 21+ from [Oracle](https://www.oracle.com/java/technologies/downloads/)
+2. Set JAVA_HOME environment variable to point to your Java installation
+3. Verify installation: type "java --version" into your command prompt
 
-Then open your browser to view the app.
+### Installing Maven
+1. Download Maven from [Apache Maven website](https://maven.apache.org/download.cgi)
+2. Extract it to a directory of your choice
+3. Add the `bin` directory to your PATH environment variable
+4. Verify installation: type "mvn --version" into your command prompt
 
-## Features
+### Installing Node.js and npm
+1. Download and install Node.js from [Node.js website](https://nodejs.org/)
+2. The installation includes npm (Node Package Manager)
+3. Verify installation: type "node --version" into your command prompt
 
-- Upload and edit photos.
-- Crop, resize, remove backgrounds, enhance images, and create photo strips.
-- Interactive welcome screen with flipping cards showing app features.
+### Installing OpenCV (Required for Backend)
+1. Download OpenCV from [OpenCV website](https://opencv.org/releases/)
+   - For Java JDK 21 or below, choose OpenCV 4.8.0
+   - For newer versions, select the appropriate compatible release
 
-## License
+2. Install OpenCV to a location on your computer (e.g., D:\opencv or C:\opencv)
 
-MIT License
+3a. For Windows:
+   - Copy the native library file from your OpenCV installation to your JDK bin folder
+   - Example: Copy `D:\opencv\build\java\x64\opencv_java480.dll` to `C:\Program Files\Java\jdk-21\bin`
+   
+3b. For Mac:
+   - Copy the native library file to your JDK bin folder
+   - Example: Copy `libopencv_java480.dylib` to your JDK bin folder
+   
+4. Put the jar file onto the system environment path
+
+## Run Application
+
+1. Open a terminal and navigate to the `backend` directory:
+   cd backend
+
+2. Install Maven dependencies:
+   mvn clean install
+
+3. Start the Spring Boot application:
+   mvn spring-boot:run
+
+4. Open another terminal and navigate to the frontend directory:
+   cd frontend
+
+5. Install npm dependencies:
+   npm install @wellbees/color-picker-input jszip file-saver
+   npm install react-card-flip
+
+6. Start the React application:
+   npm start
+
+7. Open http://localhost:3000 in your browser to view the application.
+
