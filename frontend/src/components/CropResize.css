@@ -1,36 +1,45 @@
+@import '../styles/global.css';
+
 .crop-resize-wrapper {
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  padding: 2rem;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  margin-top: 0; /* Ensure no extra top margin */
+  align-self: flex-start; /* Align to the top of container */
 }
 
 .crop-resize-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  max-height: calc(100vh - 240px);
 }
 
 .section-title {
   font-size: 1.5rem;
-  color: #2c3e50;
+  color: var(--header-title);
   margin-bottom: 1.5rem;
   font-weight: 600;
 }
 
 .editor-section {
-  background: white;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  background: var(--card-color);
   border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--card-border-color);
 }
 
 .cropper-container {
-  background: #f8f9fa;
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 400px; /* Limit height to ensure it fits */
 }
 
 .controls {
@@ -38,32 +47,7 @@
   gap: 1rem;
   justify-content: center;
   padding-top: 1.5rem;
-  border-top: 1px solid #eee;
-}
-
-.control-button {
-  padding: 0.8rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1rem;
-}
-
-.control-button.primary {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.control-button.secondary {
-  background-color: #e9ecef;
-  color: #495057;
-}
-
-.control-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--card-border-color);
 }
 
 @media (max-width: 768px) {
@@ -84,9 +68,9 @@
 
 .aspect-ratio-button {
   padding: 0.5rem 0.3rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--card-border-color);
   border-radius: 6px;
-  background: white;
+  background: var(--card-color);
   cursor: pointer;
   transition: all 0.2s ease;
   flex: 1;
@@ -96,7 +80,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #333;
+  color: var(--text);
   font-weight: 500;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   height: 36px;
@@ -114,7 +98,7 @@
 
 .aspect-ratio-button:hover:not(.active) {
   background: #f5f5f5;
-  border-color: #ccc;
+  border-color: var(--card-border-color);
 }
 
 .crop-actions {
@@ -136,10 +120,10 @@
 .preview-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 500px;
-  background: #f8f9fa;
+  height: 400px; /* Reduced height to fit in the available space */
   border-radius: 8px;
+  background: var(--card-color);
+  border: 1px solid var(--card-border-color);
 }
 
 .preview-container img {
@@ -148,32 +132,15 @@
   border-radius: 8px;
 }
 
-
 .continue-button-container {
   display: flex;
   justify-content: flex-end;
   padding: 20px;
   margin-top: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 30px; /* Ensure it's not hidden by the gallery */
 }
-
-.continue-button {
-  padding: 12px 24px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.continue-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-
 
 /* Add this to your existing CropResize.css file */
 .standard-controls.single-button {
@@ -192,19 +159,10 @@
 }
 
 /* Add to your existing CSS */
-
 .standard-controls {
   display: flex;
   gap: 1rem;
   justify-content: center;
-}
-
-.auto-detect {
-  background-color: #2196F3;
-}
-
-.auto-detect:hover {
-  background-color: #0d8bf2;
 }
 
 .auto-detect:disabled {
@@ -213,7 +171,6 @@
 }
 
 /* Replace the existing aspect-ratio-controls-container and aspect-ratio-row CSS */
-
 .aspect-ratio-controls-container {
   display: flex;
   flex-direction: column;
@@ -266,14 +223,14 @@
   align-items: center; /* Vertically align items in the center */
   justify-content: center; /* Horizontally center the entire row */
   margin-top: 20px; /* Add spacing above the row */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
 
 .manual-crop-controls label {
   font-size: 18px;
   font-weight: 500;
-  color: #555;
+  color: var(--header-title);
   margin-top: 10px;
-  /* You might need to adjust margin-top on the label if it's misaligned */
 }
 
 .manual-crop-input {
@@ -281,7 +238,7 @@
   height: 20px;
   padding: 8px;
   font-size: 16px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--card-border-color);
   border-radius: 4px;
   margin-left: 5px;
 }
@@ -292,29 +249,9 @@
   box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
 }
 
-.apply-crop-button {
-  width: 150px;
-  height: auto; /* Let height adjust based on content and padding */
-  font-size: 16px;
-  font-weight: 600;
-  line-height: normal; /* Reset line-height */
-  padding: 8px 20px; /* Use padding to control vertical alignment */
-  border-radius: 8px;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.apply-crop-button:hover {
-  background-color: #45a049; /* Slightly darker green on hover */
-  transform: translateY(-2px); /* Add a slight lift on hover */
-}
-
 .crop-divider {
   width: 100%; /* Full width of the container */
   height: 1px; /* Thin horizontal line */
-  background-color: #ddd; /* Light gray color for the divider */
+  background-color: var(--card-border-color); /* Light gray color for the divider */
   margin: 20px 0; /* Add spacing above and below the divider */
 }

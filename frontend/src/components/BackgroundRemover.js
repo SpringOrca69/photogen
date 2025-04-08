@@ -4,7 +4,6 @@ import './BackgroundRemover.css';
 import formal1 from './images/formal1.png';
 import formal2 from './images/formal2.png';
 import formal3 from './images/formal3.png';
-import ImageGallery from './ImageGallery';
 
 const clothingImages = [formal1, formal2, formal3]; // Array of clothing images
 
@@ -198,7 +197,7 @@ return (
           {!processedImage && (
         <button 
           onClick={handleBackgroundRemoval}
-              className="background-control-button"
+          className="btn btn-primary btn-large"
           disabled={isProcessing || images.length === 0}
         >
           {isProcessing ? 'Processing...' : 'Process Image'}
@@ -210,13 +209,13 @@ return (
             <div className="button-group">
               <button 
                 onClick={resetProcessedImage} 
-                className="background-control-button secondary"
+                className="btn btn-secondary btn-large" 
               >
             Reset Image
           </button>
               <button 
                 onClick={saveProcessedImage} 
-                className="background-control-button primary" 
+                className="btn btn-primary btn-large" 
                 disabled={isImageSaved}
               >
             {isImageSaved ? 'Saved!' : 'Save Image'}
@@ -225,16 +224,10 @@ return (
       )}
         </div>
       </section>
-      {/* Replace the thumbnails section with the ImageGallery component */}
-      <ImageGallery 
-        images={images} 
-        currentImageIndex={currentImageIndex}
-        isEditMode={isEditMode} 
-        handleThumbnailClick={handleThumbnailClick} 
-      />
+
       <div className="navigation">
-        <button onClick={onBack} className="navigation-button">Crop & Resize</button>
-        <button onClick={onNext} className="navigation-button">Photo Enhancement</button>
+        <button onClick={onBack} className="btn btn-secondary">Crop & Resize</button>
+        <button onClick={onNext} className="btn btn-primary">Photo Enhancement</button>
       </div>
     </div>
   </div>

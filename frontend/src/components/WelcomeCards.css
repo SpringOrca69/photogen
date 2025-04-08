@@ -1,0 +1,204 @@
+@import '../styles/global.css';
+
+/* Component-specific styles */
+.welcome-cards {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.card {
+  width: 200px;
+  height: 300px;
+  position: relative;
+  perspective: 600px;
+  transform-style: preserve-3d;
+  transition: border-color 0.3s ease;
+  transform-origin: center;
+  will-change: border-color;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.card:hover {
+  border: 2px solid var(--color-4);
+}
+
+.card > :first-child,
+.card > :nth-child(2) {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.card > :nth-child(2) {
+  transform: rotateY(180deg);
+}
+
+.placeholder-image {
+  font-size: 1.5em;
+  color: var(--header-title);
+}
+
+.get-started-button-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.welcome-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Hover area that's larger than the card itself */
+.card-hover-area {
+  position: relative;
+  width: 100%;
+  height: 280px; /* Fixed height to create stable hover area */
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 12px; /* Consistent corner radius for hover area */
+}
+
+.card-flip-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  perspective: 1000px;
+  z-index: 1;
+  border-radius: 12px; /* Consistent corner radius for flip container */
+  overflow: hidden; /* Ensures content doesn't overflow rounded corners */
+}
+
+.welcome-card {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  border-radius: 12px; /* Consistent corner radius for cards */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: var(--card-color);
+  transition: all 0.3s ease, transform 0.6s;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  overflow: hidden;
+  border: 1px solid var(--card-border-color);
+}
+
+/* Front card styling */
+.welcome-card.front {
+  text-align: center;
+}
+
+.welcome-card.front .card-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.welcome-card.front h3 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: var(--header-title);
+}
+
+/* Back card styling */
+.welcome-card.back {
+  background-color: var(--card-color);
+  text-align: center;
+  border: 1px solid var(--card-border-color);
+}
+
+.welcome-card.back p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* Add colorful border only when hovered */
+.card-flip-container.is-hovered .welcome-card {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  position: relative;
+  border: none; /* Remove the regular border */
+}
+
+/* Create rounded gradient border using pseudo-element */
+.card-flip-container.is-hovered .welcome-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  padding: 3px; /* Border width */
+  background: linear-gradient(45deg, var(--color-3), var(--color-4), var(--color-5), var(--color-6));
+  -webkit-mask: 
+     linear-gradient(var(--header-title) 0 0) content-box, 
+     linear-gradient(var(--header-title) 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none; /* Ensures the pseudo-element doesn't interfere with clicks */
+  z-index: 1;
+}
+
+/* Smooth animation for the flip */
+.react-card-flip {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+/* Ensure consistent sizing across different screen sizes */
+@media (max-width: 768px) {
+  .welcome-cards-container {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .card-hover-area {
+    height: 240px;
+  }
+  
+  .welcome-card {
+    padding: 1.5rem;
+    min-height: 220px;
+  }
+  
+  .welcome-card.front .card-icon {
+    font-size: 2.5rem;
+  }
+  
+  .welcome-card.front h3 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-cards-container {
+    grid-template-columns: 1fr;
+  }
+}

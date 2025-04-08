@@ -1,25 +1,31 @@
+@import '../styles/global.css';
+
 .background-remover-wrapper {
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  padding: 2rem;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  margin-top: 0; /* Ensure no extra top margin */
+  align-self: flex-start; /* Align to the top of container */
 }
 
 .background-remover-container {
-    max-width: 1400px;
-    background-color: #f8f9fa;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  max-height: calc(100vh - 240px);
 }
 
 /* Background Options Section */
 .background-options {
   margin-top: 20px;
   padding: 20px;
-  background-color: #f9f9f9; /* Light background for contrast */
-  border-radius: 8px; /* Rounded corners */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  background: var(--card-color);
+  border: 1px solid var(--card-border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Section Title */
@@ -27,52 +33,63 @@
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 15px;
-  color: #333; /* Darker text for better readability */
+  color: var(--header-title);
 }
 
 /* Labels for Color Picker and Custom Background */
 .color-picker-label,
 .custom-background-label {
   display: block;
-  font-size: 14px; /* Slightly smaller font size */
-  font-weight: 500; /* Medium weight for subtle emphasis */
+  font-size: 14px;
+  font-weight: 500;
   margin-bottom: 8px;
-  color: #555; /* Muted text color for a softer look */
+  color: var(--header-title);
+}
+
+.editor-section {
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  background: var(--card-color);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--card-border-color);
 }
 
 /* Section Divider */
 .section-divider {
   margin: 20px 0;
-  border-top: 1px solid #ddd; /* Subtle divider line */
+  border-top: 1px solid var(--card-border-color);
 }
 
 /* Custom Background Input */
 .custom-background-input {
   display: block;
-  width: 98%; /* Full width for better alignment */
+  width: 98%;
   padding: 8px;
   font-size: 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--card-border-color);
   border-radius: 4px;
   background-color: #fff;
   transition: border-color 0.3s ease;
 }
 
 .custom-background-input:hover {
-  border-color: #007bff; /* Highlight border on hover */
+  border-color: #007bff;
 }
 
 .custom-background-input:focus {
   outline: none;
-  border-color: #007bff; /* Highlight border on focus */
-  box-shadow: 0 0 4px rgba(0, 123, 255, 0.5); /* Add focus shadow */
+  border-color: #007bff;
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
 }
 
 .button-group {
-  display: flex; /* Use flexbox to align buttons side by side */
-  gap: 10px; /* Add spacing between the buttons */
-  justify-content: center; /* Center the buttons horizontally */
-  margin-top: 10px; /* Add some spacing above the buttons */
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
 }
 
 .background-controls {
@@ -80,124 +97,86 @@
   gap: 1rem;
   justify-content: center;
   padding-top: 1.5rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--card-border-color);
   min-width: 180px;
   margin: 20px 0;
 }
 
-.background-control-button {
-  width: 180px; /* Increase the width to make the button longer */
-  height: 60px; /* Keep the height consistent */
-  font-size: 16px; /* Keep the font size readable */
-  font-weight: 700; /* Make the text bolder */
-  padding: 0; /* Keep padding at 0 to rely on width/height */
-  line-height: 60px; /* Match the height to vertically center text */
-  text-align: center; /* Center text horizontally */
-  border-radius: 6px; /* Add slightly rounded corners for a modern look */
-  transition: all 0.3s ease; /* Smooth transition for hover effects */
-  background-color: #4caf50; /* Light background for contrast */
-}
-
-.background-control-button:hover {
-  background-color: #56cd5a; /* Add a subtle hover effect */
-  transform: translateY(-2px); /* Slight lift on hover */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add a shadow for depth */
-}
-
-.background-control-button.secondary {
-  background-color: #827d7d; /* Example styling for secondary button */
-  border: 1px solid #ccc;
-}
-
-.background-control-button.primary {
-  background-color: #4caf50; /* Example styling for primary button */
-  color: white;
-  border: none;
-}
-
-.background-control-button.primary:hover {
-  background-color: #56cd5a; /* Example styling for primary button hover */
-}
-
-.background-control-button.secondary:hover {
-  background-color: #ada9a9; /* Example styling for secondary button hover */
-}
-
 .clothing-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px; /* Space between cards */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .clothing-card {
-    width: 100px; /* Set a fixed width for the cards */
-    height: auto; /* Maintain aspect ratio */
-    border: 1px solid #ccc; /* Optional border */
-    border-radius: 8px; /* Rounded corners */
-    overflow: hidden; /* Hide overflow */
-}
-
-.clothing-card img {
-    width: 100%; /* Make image fill the card */
-    height: auto; /* Maintain aspect ratio */
-}
-
-.clothing-card {
+  width: 100px;
+  height: auto;
+  border: 1px solid var(--card-border-color);
+  border-radius: 8px;
+  overflow: hidden;
   display: inline-block;
   margin: 10px;
   padding: 10px;
   border: 2px solid transparent;
   cursor: pointer;
   transition: border-color 0.3s ease;
+  background: var(--card-color);
+}
+
+.clothing-card img {
+  width: 100%;
+  height: auto;
 }
 
 .clothing-card:hover {
-  border-color: #007bff; /* Change to your desired hover color */
+  border-color: #007bff;
 }
 
 .clothing-card.selected {
-  border-color: #28a745; /* Change to your desired selected color */
+  border-color: #28a745;
 }
 
 .process-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 500px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  height: 400px; /* Reduced height to fit in the available space */
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  background: var(--card-color);
+  border: 1px solid var(--card-border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.process-container img {
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .navigation {
-  display: flex; /* Use flexbox to align buttons horizontally */
-  justify-content: center; /* Center the buttons horizontally */
-  gap: 10px; /* Add spacing between the buttons */
-  margin-top: 20px; /* Add some spacing above the navigation section */
-}
-
-.navigation-button {
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 16px; /* Adjust font size for readability */
-  border: none; /* Remove default border */
-  border-radius: 4px; /* Add rounded corners */
-  cursor: pointer; /* Change cursor to pointer on hover */
-  background-color: #4caf50; /* Button background color */
-  color: white; /* Button text color */
-  transition: background-color 0.3s ease; /* Smooth hover effect */
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+  margin-bottom: 30px; /* Ensure it's not hidden by the gallery */
 }
 
 .color-picker-and-toggle {
   display: flex;
-  align-items: center; /* Align items vertically in the center */
-  gap: 20px; /* Add space between the color picker and the toggle */
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
 
 .color-picker {
   flex: 1;
-  flex-direction: column; /* Stack the label and color picker vertically */
+  flex-direction: column;
   gap: 5px; 
+  min-width: 200px; /* Ensure it doesn't get too small */
 }
 
 .formal-clothes-toggle {
@@ -208,10 +187,11 @@
 
 .toggle-label {
   display: flex;
-  align-items: center; /* Align the checkbox and label text vertically */
-  gap: 10px; /* Add space between the checkbox and the label text */
+  align-items: center;
+  gap: 10px;
   font-size: 16px;
-  white-space: nowrap; /* Prevent text wrapping */
+  white-space: nowrap;
+  color: var(--text);
 }
 
 .toggle-label input[type="checkbox"] {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './photostrip.css';
-import ImageGallery from './ImageGallery';
 
 // Debug helper component to display image details
 const ImageDebugger = ({ image, index, isSelected }) => {
@@ -178,16 +177,6 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
         setShowConfirmDialog(false);
     };
 
-    // Early return for empty images array
-    if (images.length === 0) {
-        return (
-            <div className="passport-strip-container empty-state">
-                <h2>No Images Available</h2>
-                <p>Please upload an image first to create passport strips.</p>
-            </div>
-        );
-    }
-
     const currentImage = images[currentImageIndex];
     const currentImageSource = getImageSource(currentImage);
 
@@ -307,13 +296,14 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
                             <button
                                 onClick={() => setShowConfirmDialog(false)}
+                                className="btn btn-secondary"
                                 style={{ marginRight: '10px' }}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmRemoveInvalidImages}
-                                style={{ backgroundColor: '#d33', color: 'white' }}
+                                className="btn btn-primary"
                             >
                                 Remove
                             </button>
@@ -409,22 +399,12 @@ const PhotoStrip = ({ images, setImages, currentImageIndex, setCurrentImageIndex
             </div>
 
             <button
-                className="create-button"
+                className="btn btn-primary create-button"
                 onClick={handleCreate}
                 disabled={!currentImage || !currentImageSource}
             >
                 Create Passport Strip
             </button>
-
-            <div className="image-gallery-container">
-                <ImageGallery
-                    images={images}
-                    currentImageIndex={currentImageIndex}
-                    handleThumbnailClick={handleThumbnailClick}
-                    handleDeleteImage={handleDeleteImage}
-                    isEditMode={false}
-                />
-            </div>
         </div>
     );
 };

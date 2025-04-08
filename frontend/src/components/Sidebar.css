@@ -1,55 +1,96 @@
-.sidebar {
-  width: 250px;
-  height: 100vh;
-  background-color: white;
-  color: #1a1a1a;
-  padding: 30px 0;
+@import '../styles/global.css';
+
+.sidebar-floating {
+  width: 80px;
+  height: auto;
+  background-color: var(--card-color);
+  color: var(--text);
+  padding: 20px 0;
   position: fixed;
-  left: 0;
-  top: 0;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  left: 20px;
+  top: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+  border: 1px solid var(--card-border-color);
 }
 
 .sidebar-logo {
-  padding: 0 30px;
-  margin-bottom: 30px;
-  font-size: 24px;
-  font-weight: bold;
-  color: #2563eb;
+  width: 45px;
 }
 
-.sidebar-item {
-  padding: 15px 30px;
-  margin: 5px 0;
+.sidebar-undo-redo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  align-items: center;
+}
+
+.sidebar-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   cursor: pointer;
   transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  color: #4b5563;
+  position: relative;
 }
 
-.sidebar-item:hover {
+.sidebar-icon:hover:not(.disabled) {
   background-color: #f3f4f6;
-  color: #2563eb;
+  transform: translateY(-2px);
 }
 
-.sidebar-item.active {
+.sidebar-icon.active {
   background-color: #eff6ff;
-  color: #2563eb;
-  border-right: 3px solid #2563eb;
+  color: var(--color-4);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.sidebar-item.disabled {
-  color: #ccc;
+.sidebar-icon.disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .sidebar-item-icon {
-  margin-right: 12px;
-  font-size: 1.2em;
+  font-size: 1.5em;
 }
 
-.main-content {
-  margin-left: 250px;
-  padding: 20px;
+/* Tooltip for sidebar icons */
+.sidebar-icon:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 70px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: var(--card-color);
+  color: var(--text);
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  border: 1px solid var(--card-border-color);
+}
+
+/* Don't show tooltip for disabled items */
+.sidebar-icon.disabled:hover::after {
+  display: none;
 }

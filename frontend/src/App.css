@@ -1,59 +1,111 @@
+@import './styles/global.css';
+
+/* App-specific styles */
 .App {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--background-gradient);
+}
+
+/* Welcome page styles */
+.welcome-page {
+  width: 100%;
+  height: 100vh;
   display: flex;
-  min-height: 100vh;
-  background-color: #f5f7fb;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background: var(--background-gradient);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.main-content {
-  flex-grow: 1;
-  padding: 40px;
-  background-color: #f5f5f5;
-  margin-left: 250px;
-  transition: margin-left 0.3s;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.welcome-content {
-  text-align: center;
-  padding: 60px 20px;
-  border-radius: 12px;
-  background: white;
+.get-started-btn {
+  padding: 12px 24px;
+  background-color: var(--color-4);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 800px;
-  margin: 0 auto;
 }
 
-.welcome-content h1 {
-  color: #1a1a1a;
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
+.get-started-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
-.welcome-content p {
-  color: #666;
-  font-size: 1.1rem;
-  line-height: 1.6;
+/* Editor page styles */
+.editor-page {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.editor-content {
+  flex: 1;
+  margin-left: 80px; /* Width of the sidebar */
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  height: calc(100vh - 200px); /* Adjust for image gallery height */
+  max-height: calc(100vh - 200px); /* Ensure content doesn't overflow */
+}
+
+/* Fixed image gallery at the bottom */
+.image-gallery-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  background: var(--card-color);
+  border-top: 1px solid var(--card-border-color);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: 10px 20px;
+  box-sizing: border-box;
+}
+
+/* Ensure the image gallery title is smaller to fit in the fixed space */
+.image-gallery-fixed .section-title {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+/* Adjust the thumbnails section to fit in the fixed space */
+.image-gallery-fixed .thumbnails-section {
+  margin-top: 0;
+  height: 160px;
+}
+
+/* Ensure the thumbnails container doesn't overflow */
+.image-gallery-fixed .thumbnails-scroll-container {
+  height: 140px;
+}
+
+/* Removed extra bottom padding from component wrappers so all content ends at the top of the fixed image gallery */
+
+/* Ensure all component containers have proper overflow handling */
+.crop-resize-container,
+.background-remover-container,
+.photo-enhancement-container {
+  overflow-y: auto;
+  max-height: calc(100vh - 240px);
+}
+
+/* Ensure navigation buttons are visible */
+.navigation,
+.continue-button-container {
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 50;
 }

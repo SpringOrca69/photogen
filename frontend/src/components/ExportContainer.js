@@ -1,107 +1,109 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import './Export.css';
 
-const ExportContainer = forwardRef(({ image, errors }, ref) => {
+const ExportContainer = forwardRef(({ image, errors = [], onDelete }, ref) => {
     const [filename, setFilename] = useState('');
     const [format, setFormat] = useState('jpeg');
+    const [quality, setQuality] = useState(90);
     const [scale, setScale] = useState(100);
-    const [quality, setQuality] = useState(100);
-    const [fileSize, setFileSize] = useState(null);
     const [resolution, setResolution] = useState({ width: 0, height: 0 });
-
+    const [fileSize, setFileSize] = useState(null);
+    const [processedImage, setProcessedImage] = useState(null);
+    
+    // Get base name without extension
     useEffect(() => {
-        if (image?.url) {
-            const originalName = image.name ? image.name.split('.')[0] : 'Untitled';
-            setFilename(`PhotoGen — ${originalName}`);
-            estimateFileSize(image.url);
+        if (image && image.name) {
+            const baseName = image.name.split('.').slice(0, -1).join('.');
+            setFilename(baseName || 'image');
         }
     }, [image]);
-
+    
+    // Calculate resolution and file size when parameters change
     useEffect(() => {
-        if (image?.url) {
-            estimateFileSize(image.url);
-        }
-    }, [scale, quality, format]);
-
-    const estimateFileSize = (imgUrl) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = imgUrl;
-
-        img.onload = () => {
-            canvas.width = (img.width * scale) / 100;
-            canvas.height = (img.height * scale) / 100;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            setResolution({ width: canvas.width, height: canvas.height });
-
-            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality / 100 : 1);
-            setFileSize((dataUrl.length * (3 / 4) / 1024).toFixed(2));
-        };
-    };
-
-    const processImage = () => {
-        if (!image?.url) return;
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = image.url;
-
-        img.onload = () => {
-            canvas.width = (img.width * scale) / 100;
-            canvas.height = (img.height * scale) / 100;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            const dataUrl = canvas.toDataURL(`image/${format}`, format === 'jpeg' ? quality / 100 : 1);
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = `${filename.trim() || 'PhotoGen -- Exported'}.${format}`;
-            link.click();
-        };
-    };
-
-    // Expose method for Export.js to access processed image + name
-    useImperativeHandle(ref, () => ({
-        async getProcessedBlobAndFilename() {
-            return new Promise((resolve) => {
+        if (image && image.url) {
+            const img = new Image();
+            img.onload = () => {
+                const scaledWidth = Math.round((img.width * scale) / 100);
+                const scaledHeight = Math.round((img.height * scale) / 100);
+                
+                setResolution({
+                    width: scaledWidth,
+                    height: scaledHeight
+                });
+                
+                // Estimate file size
                 const canvas = document.createElement('canvas');
+                canvas.width = scaledWidth;
+                canvas.height = scaledHeight;
+                
                 const ctx = canvas.getContext('2d');
-                const img = new Image();
-                img.src = image.url;
-
-                img.onload = () => {
-                    canvas.width = (img.width * scale) / 100;
-                    canvas.height = (img.height * scale) / 100;
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob((blob) => {
-                        resolve({
-                            blob,
-                            filename: `${filename.trim() || 'PhotoGen -- Exported'}.${format}`
-                        });
-                    }, `image/${format}`, format === 'jpeg' ? quality / 100 : 1);
-                };
-            });
+                ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+                
+                const dataURL = canvas.toDataURL(`image/${format}`, quality / 100);
+                const binary = atob(dataURL.split(',')[1]);
+                const estimatedSize = Math.round(binary.length / 1024); // KB
+                
+                setFileSize(estimatedSize);
+                setProcessedImage(dataURL);
+            };
+            
+            img.src = image.url;
+        }
+    }, [image, scale, format, quality]);
+    
+    // Expose methods to parent component
+    useImperativeHandle(ref, () => ({
+        getProcessedBlobAndFilename: async () => {
+            // Create a proper filename with extension
+            const extension = format === 'jpeg' ? 'jpg' : format;
+            const fullFilename = `${filename}.${extension}`;
+            
+            // Convert data URL to Blob
+            const response = await fetch(processedImage);
+            const blob = await response.blob();
+            
+            return {
+                blob,
+                filename: fullFilename
+            };
         }
     }));
-
+    
+    const processImage = () => {
+        if (processedImage) {
+            const link = document.createElement('a');
+            const extension = format === 'jpeg' ? 'jpg' : format;
+            link.download = `${filename}.${extension}`;
+            link.href = processedImage;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+    
+    if (!image) return null;
+    
     return (
         <div className="export-card">
-            <div className="export-container">
+            {onDelete && (
+                <button 
+                    className="export-delete-btn" 
+                    onClick={onDelete}
+                    title="Remove from export"
+                >
+                    ×
+                </button>
+            )}
+            
+            <div className="export-container-row">
                 <div className="export-left">
                     <div className="export-preview">
-                        <h3>Preview</h3>
-                        <img src={image.url} alt="Exported preview" className="exported-image" />
-                        {errors && errors.length > 0 && (
-                        <div className="compliance-errors">
-                            <h3>Warning! This image does not meet the following standard ID-Photo guidelines:</h3>
-                            <ul>
-                                {errors.map((error, i) => (
-                                    <li key={i}>{error}</li>
-                                ))}
-                            </ul>
-                        </div>
+                        {image.url && (
+                            <img 
+                                src={image.url} 
+                                alt={image.name || 'Preview'} 
+                                className="exported-image" 
+                            />
                         )}
                     </div>
                 </div>
@@ -109,7 +111,12 @@ const ExportContainer = forwardRef(({ image, errors }, ref) => {
                 <div className="export-right">
                     <h2>Export Image</h2>
                     <div className="export-options">
-                        <input type="text" value={filename} onChange={(e) => setFilename(e.target.value)} />
+                        <input 
+                            type="text" 
+                            value={filename} 
+                            onChange={(e) => setFilename(e.target.value)} 
+                            placeholder="Filename"
+                        />
                         <select value={format} onChange={(e) => setFormat(e.target.value)}>
                             <option value="jpeg">JPEG</option>
                             <option value="png">PNG</option>
@@ -130,12 +137,22 @@ const ExportContainer = forwardRef(({ image, errors }, ref) => {
                     )}
 
                     <p>Estimated file size: {fileSize ? `${fileSize} KB` : 'Calculating...'}</p>
-                    <button onClick={processImage}>Download Image</button>
+                    <button onClick={processImage} className="btn btn-primary">Download Image</button>
                 </div>
             </div>
+
+            {errors.length > 0 && (
+                <div className="compliance-errors">
+                    <h3>Image may not be compliant with standards:</h3>
+                    <ul>
+                        {errors.map((error, i) => (
+                            <li key={i}>{error}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 });
 
 export default ExportContainer;
-

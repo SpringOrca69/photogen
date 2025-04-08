@@ -156,22 +156,18 @@ function Upload({ onNext, updateImages, setCurrentImageIndex }) {
                 <img src={preview.url} alt={preview.name} />
                 <div className="preview-info">
                   <span className="preview-name">{preview.name}</span>
-                  <button 
-                    onClick={() => handleDelete(index)}
-                    className="delete-button"
-                  >
+                  <div className="delete-button" onClick={() => handleDelete(index)}>
                     ×
-                  </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
           <button 
-            onClick={handleNextClick}
-            className="next-button"
-            disabled={toBeUploaded.length === 0}
-          >
-            Continue to Edit
+            className="btn btn-primary btn-large next-button"
+            onClick={handleNextClick} 
+            disabled={toBeUploaded.length === 0}>
+            Continue to Crop & Resize
           </button>
         </div>
       )}

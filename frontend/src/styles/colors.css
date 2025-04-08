@@ -1,0 +1,13 @@
+:root {
+  --background-color: #f8f8f8;
+  --background-gradient: linear-gradient(to bottom, #f8f8f8, #eaedf7);
+  --card-color: #f8f8f8;
+  --card-border-color: #e0e0e0;
+  --header-title: #080624;
+  --text: #3a3950;
+  --color-1: #e8e8e8;
+  --color-3: #833ab4;
+  --color-4: #2563eb;
+  --color-5: #e1306c;
+  --color-6: #fcaf45;
+}

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import Cropper from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 import './CropResize.css';
-import ImageGallery from './ImageGallery';
 
 function CropResize({ images, setImages, currentImageIndex= images.length - 1, setCurrentImageIndex, onNext }) {
   const [isCropMode, setIsCropMode] = useState(false);
@@ -287,12 +286,12 @@ function CropResize({ images, setImages, currentImageIndex= images.length - 1, s
           <div className="controls">
             {!isCropMode ? (
               <div className="standard-controls">
-                <button onClick={handleStartCrop} className="control-button primary">
+                <button onClick={handleStartCrop} className="btn btn-primary">
                   Crop Manually
                 </button>
                 <button 
                   onClick={handleAutoDetect} 
-                  className="control-button primary auto-detect"
+                  className="btn btn-secondary"
                   disabled={isAutoDetecting}
                 >
                   {isAutoDetecting ? 'Detecting...' : 'Auto-Detect Face'}
@@ -345,7 +344,7 @@ function CropResize({ images, setImages, currentImageIndex= images.length - 1, s
                   </label>
                   <button
                     onClick={() => handleApplyManualCrop()}
-                    className="apply-crop-button"
+                    className="btn btn-primary"
                   >
                     Apply Crop
                   </button>
@@ -354,10 +353,10 @@ function CropResize({ images, setImages, currentImageIndex= images.length - 1, s
                 <div className="crop-divider"></div>
                 
                 <div className="crop-actions">
-                  <button onClick={handleCancelCrop} className="control-button secondary">
+                  <button onClick={handleCancelCrop} className="btn btn-secondary">
                     Cancel
                   </button>
-                  <button onClick={handleSaveCrop} className="control-button primary">
+                  <button onClick={handleSaveCrop} className="btn btn-primary">
                     Save Crop
                   </button>
                 </div>
@@ -366,15 +365,8 @@ function CropResize({ images, setImages, currentImageIndex= images.length - 1, s
           </div>
         </section>
 
-        <ImageGallery 
-          images={images} 
-          currentImageIndex={currentImageIndex} 
-          isEditMode={isCropMode} 
-          handleThumbnailClick={handleThumbnailClick} 
-        />
-
         <div className="continue-button-container">
-          <button className="continue-button" onClick={handleContinue}>
+          <button className="btn btn-primary btn-large" onClick={handleContinue}>
             Continue to Background Remover
           </button>
         </div>

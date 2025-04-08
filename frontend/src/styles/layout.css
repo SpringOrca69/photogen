@@ -1,0 +1,20 @@
+/* Global layout fixes */
+
+/* Common wrapper for all components */
+[class$="-wrapper"] {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  align-self: flex-start !important;
+  width: 100% !important;
+}
+
+/* Fix for containers */
+[class$="-container"] {
+  margin-top: 0 !important;
+  align-self: flex-start !important;
+}
+
+/* Always make main section appear at the top of the page */
+.main-content > div {
+  margin-top: 0 !important;
+}

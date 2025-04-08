@@ -1,0 +1,542 @@
+@import './colors.css';
+@import './layout.css';
+
+/* Global styles for PhotoGen2 */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--background-gradient);
+  color: var(--text);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* Typography standardization */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--header-title);
+  margin-top: 0;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+h5 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+h6 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* App structure */
+.App {
+  width: 100%;
+  height: 100vh;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Main content area */
+.main-content {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-y: auto;
+  background-color: transparent;
+}
+
+/* When sidebar is present, adjust content to not overlap */
+.App:has(.sidebar) .main-content {
+  width: calc(100% - 250px) !important;
+  margin-left: 250px !important;
+}
+
+/* Alternative selector for browsers that don't support :has */
+.App.with-sidebar .main-content {
+  width: calc(100% - 250px) !important; 
+  margin-left: 250px !important;
+}
+
+/* Welcome content */
+.welcome-content {
+  flex: 1;
+  background: transparent;
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Component containers */
+.component-wrapper {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  align-self: flex-start !important;
+}
+
+/* Common component containers */
+.welcome-content, 
+.photo-enhancement-wrapper,
+.crop-resize-wrapper,
+.background-remover-wrapper,
+.passport-strip-container,
+.upload-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  padding: 1rem 2rem;
+}
+
+/* Card and container styles */
+.card {
+  background: var(--card-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--card-border-color);
+  margin-bottom: 20px;
+}
+
+.card-raised {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.section-container {
+  background: var(--card-color);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--card-border-color);
+}
+
+/* Layout patterns */
+.flex-container {
+  display: flex;
+  width: 100%;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.flex-center {
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  justify-content: space-between;
+}
+
+.flex-gap-small {
+  gap: 10px;
+}
+
+.flex-gap-medium {
+  gap: 20px;
+}
+
+.flex-gap-large {
+  gap: 30px;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+/* Typography */
+.section-title {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: var(--header-title);
+  font-weight: 600;
+}
+
+.subsection-title {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: var(--header-title);
+  font-weight: 500;
+}
+
+/* Grid layouts */
+.grid {
+  display: grid;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.grid-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+/* Form controls */
+.control-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.control-group label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: var(--header-title);
+}
+
+.control-group input,
+.control-group select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.control-group input[type="range"] {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.control-group input[type="color"] {
+  height: 36px;
+  padding: 2px;
+}
+
+/* Control panels and option groups */
+.control-panel {
+  background-color: var(--card-color);
+  border-radius: 6px;
+  border: 1px solid var(--card-border-color);
+  padding: 15px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.control-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+}
+
+/* Preview containers */
+.preview-container {
+  display: flex;
+  justify-content: center;
+  background-color: white;
+  border: 1px solid var(--card-border-color);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.preview-container img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-large {
+  padding: 12px 24px;
+  font-size: 16px;
+}
+
+.btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Action button styles */
+.action-button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.action-button:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Thumbnails & cards */
+.thumbnail-card {
+  background: var(--card-color);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid var(--card-border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.thumbnail-card.active {
+  border-color: #4CAF50;
+  transform: scale(1.02);
+}
+
+.thumbnail-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.thumbnail-image {
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.thumbnail-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbnail-info {
+  padding: 0.8rem;
+  background: var(--card-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.thumbnail-name {
+  font-size: 0.9rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  background: #4CAF50;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* Dividers and separators */
+.divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--card-border-color);
+  margin: 20px 0;
+}
+
+/* Common state styles */
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Empty states */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text);
+  background-color: var(--card-color);
+  border-radius: 8px;
+  padding: 40px;
+  margin: 40px auto;
+  max-width: 600px;
+  min-height: 300px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--card-border-color);
+}
+
+.empty-state h2 {
+  margin-bottom: 10px;
+  color: var(--header-title);
+  font-size: 24px;
+}
+
+.empty-state p {
+  max-width: 400px;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+/* Export specific layout fixes */
+.export-buttons-container {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  gap: 15px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.export-multiple-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  box-sizing: border-box;
+}
+
+.export-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.export-container-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.export-left,
+.export-right {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .grid-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .section-title {
+    font-size: 20px;
+  }
+  
+  .control-panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .container, 
+  .section-container {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .section-container {
+    padding: 1rem;
+  }
+  
+  .btn-large {
+    padding: 10px 20px;
+  }
+}

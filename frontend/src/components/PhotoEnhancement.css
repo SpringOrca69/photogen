@@ -1,44 +1,156 @@
-.photo-enhancement-container {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
+@import '../styles/global.css';
+
+.photo-enhancement-wrapper {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
 }
 
-.tools-section, .image-preview-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    background-color: #f9f9f9;
+.photo-enhancement-container {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  overflow-y: auto;
+  max-height: calc(100vh - 240px);
+}
+
+.tools-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 12px;
+  box-sizing: border-box;
+  background: var(--card-color);
+  border: 1px solid var(--card-border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-width: 300px; /* Ensure it doesn't get too small */
+}
+
+.image-preview-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 12px;
+  box-sizing: border-box;
+  background: var(--card-color);
+  border: 1px solid var(--card-border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  align-items: center;
+  justify-content: center;
+  min-width: 300px; /* Ensure it doesn't get too small */
+  min-height: 400px; /* Ensure there's always space for the image */
+}
+
+.tools-section h3,
+.image-preview-section h3 {
+  color: var(--header-title);
+  margin-bottom: 15px;
+  font-size: 1.2rem;
 }
 
 .tools-section label {
-    margin-top: 10px;
-    font-weight: 500;
+  margin-top: 10px;
+  font-weight: 500;
+  color: var(--header-title);
 }
 
 .tools-section input[type="range"] {
-    width: 100%;
-    margin: 10px 0;
+  width: 100%;
+  margin: 10px 0;
 }
 
-.tools-section button {
-    margin-top: 15px;
-    padding: 8px 12px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+/* Enhancement buttons container */
+.enhancement-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
 }
 
-.tools-section button:hover {
-    background-color: #45a049;
+.enhancement-buttons button {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Visual indicator for unsaved changes */
+.btn.has-changes {
+  background-color: #4CAF50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
 }
 
 .image-preview-section img {
+  max-width: 100%;
+  max-height: 400px; /* Reduced height to fit in the available space */
+  object-fit: contain;
+  width: auto; 
+  height: auto;
+  border-radius: 5px;
+}
+
+/* Error message styling */
+.error-message {
+  background-color: #ffeeee;
+  border: 1px solid #ff6666;
+  color: #cc0000;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* No image message styling */
+.no-image-message {
+  color: var(--text);
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  border: 1px dashed var(--card-border-color);
+  width: 80%;
+  margin: 20px auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .photo-enhancement-container {
+    flex-direction: column;
+  }
+  
+  .tools-section,
+  .image-preview-section {
     width: 100%;
-    border-radius: 5px;
+  }
+  
+  .image-preview-section img {
+    max-height: 300px;
+  }
+}
+
+/* Disabled controls */
+.tools-section input[type="range"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tools-section button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

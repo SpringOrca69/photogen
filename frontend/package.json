@@ -12,6 +12,7 @@
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "react": "^18.2.0",
+    "react-card-flip": "^1.2.3",
     "react-cropper": "^2.3.3",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.30.0",
