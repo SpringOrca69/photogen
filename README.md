@@ -71,8 +71,7 @@ Before running the application, make sure you have the following installed:
    cd frontend
 
 5. Install npm dependencies:
-   npm install @wellbees/color-picker-input jszip file-saver
-   npm install react-card-flip
+   npm install @wellbees/color-picker-input jszip file-saver react-card-flip
 
 6. Start the React application:
    npm start
